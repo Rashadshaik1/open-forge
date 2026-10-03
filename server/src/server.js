@@ -5,6 +5,8 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import registrationRoutes from './routes/registrationRoutes.js';
+import galleryRoutes from './routes/galleryRoutes.js';
+import addonRoutes from './routes/addonRoutes.js';
 
 dotenv.config();
 
@@ -18,6 +20,8 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/registrations', registrationRoutes);
+app.use('/api/gallery', galleryRoutes);
+app.use('/api', addonRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

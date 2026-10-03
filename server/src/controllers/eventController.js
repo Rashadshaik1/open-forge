@@ -191,3 +191,75 @@ export const deleteEvent = async (req, res) => {
     });
   }
 };
+
+// @desc    Manually toggle registration open/close
+// @route   PATCH /api/events/:id/toggle-registration
+// @access  Private (Board & Admin only)
+export const toggleEventRegistration = async (req, res) => {
+  try {
+    const event = await Event.findById(req.params.id);
+
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Toggle boolean or set explicitly if passed in body
+    if (typeof req.body.isOpen === 'boolean') {
+      event.isRegistrationOpen = req.body.isOpen;
+    } else {
+      event.isRegistrationOpen = !event.isRegistrationOpen;
+    }
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Registrations are now ${event.isRegistrationOpen ? 'OPEN' : 'CLOSED'}.`,
+      data: {
+        eventId: event._id,
+        isRegistrationOpen: event.isRegistrationOpen,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Manually set event status (upcoming, ongoing, completed, cancelled)
+// @route   PATCH /api/events/:id/status
+// @access  Private (Board & Admin only)
+export const updateEventStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['upcoming', 'ongoing', 'completed', 'cancelled'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    const event = await Event.findById(req.params.id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    event.status = status;
+
+    // If event is marked completed or cancelled, auto-close registrations as well
+    if (status === 'completed' || status === 'cancelled') {
+      event.isRegistrationOpen = false;
+    }
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Event status manually updated to '${status}'.`,
+      data: event,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

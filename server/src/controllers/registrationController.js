@@ -18,24 +18,12 @@ export const registerForEvent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
-    if (event.status !== 'upcoming') {
+    // Comprehensive check: evaluates manual switch, time deadline, capacity, and status
+    const check = event.canAcceptRegistration();
+    if (!check.allowed) {
       return res.status(400).json({
         success: false,
-        message: `Cannot register: Event is currently ${event.status}`,
-      });
-    }
-
-    if (new Date() > new Date(event.registrationDeadline)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Registration deadline has passed',
-      });
-    }
-
-    if (event.registeredCount >= event.capacity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Event registration is full',
+        message: check.reason,
       });
     }
 

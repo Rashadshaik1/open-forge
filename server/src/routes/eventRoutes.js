@@ -5,6 +5,8 @@ import {
   createEvent,
   updateEvent,
   deleteEvent,
+  toggleEventRegistration,
+  updateEventStatus,
 } from '../controllers/eventController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -14,6 +16,10 @@ router
   .route('/')
   .get(getEvents)
   .post(protect, authorize('board', 'admin'), createEvent);
+
+// Manual toggle routes (Board & Admin only)
+router.patch('/:id/toggle-registration', protect, authorize('board', 'admin'), toggleEventRegistration);
+router.patch('/:id/status', protect, authorize('board', 'admin'), updateEventStatus);
 
 router
   .route('/:id')
