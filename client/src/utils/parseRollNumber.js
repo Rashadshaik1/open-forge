@@ -18,12 +18,8 @@ export const DEPARTMENT_CODES = {
 export const BRANCH_CODES = DEPARTMENT_CODES;
 
 /**
- * Calculates current study year based on joining year:
- * - 2025 joiners -> 1st Year
- * - 2024 joiners -> 2nd Year
- * - 2023 joiners -> 3rd Year
- * - 2022 joiners -> 4th Year
- * - Prior joiners -> Graduated
+ * Calculates current study year dynamically based on joining year
+ * and the current academic calendar cycle (June/July start).
  *
  * @param {number|null} joiningYear
  * @param {Date} [referenceDate=new Date()]
@@ -34,47 +30,32 @@ export function calculateStudyYear(joiningYear, referenceDate = new Date()) {
     return '';
   }
 
-  // Explicit study year rules
-  const explicitYears = {
-    2025: '1st Year',
-    2024: '2nd Year',
-    2023: '3rd Year',
-    2022: '4th Year',
-  };
-
-  if (explicitYears[joiningYear]) {
-    return explicitYears[joiningYear];
-  }
-
-  if (joiningYear < 2022) {
-    return 'Graduated';
-  }
-
-  // Dynamic fallback for future academic years
   const currentCalendarYear = referenceDate.getFullYear();
-  const currentMonth = referenceDate.getMonth();
+  const currentMonth = referenceDate.getMonth(); // 0-indexed (June = 5)
+  
+  // An academic year transitions around June/July
   const currentAcademicYear =
-    currentMonth >= 6 ? currentCalendarYear : currentCalendarYear - 1;
+    currentMonth >= 5 ? currentCalendarYear : currentCalendarYear - 1;
 
   const yearDiff = currentAcademicYear - joiningYear + 1;
 
+  if (yearDiff <= 0) return 'Upcoming';
   if (yearDiff === 1) return '1st Year';
   if (yearDiff === 2) return '2nd Year';
   if (yearDiff === 3) return '3rd Year';
   if (yearDiff === 4) return '4th Year';
-  if (yearDiff > 4) return 'Graduated';
-  return 'Upcoming';
+  return 'Graduated';
 }
 
 /**
  * Parses a 12-digit GVPCE roll number or email.
  *
- * Structure Breakdown (e.g. 324103311037):
+ * Structure Breakdown (e.g. 324103314068):
  * - '3'     -> University Code
  * - '24'    -> Joining Year (2024)
  * - '1033'  -> College Identifier
- * - '11'    -> Department / Branch Code
- * - '037'   -> Student Unique Number
+ * - '14'    -> Department / Branch Code (EEE)
+ * - '068'   -> Student Unique Number
  *
  * Regex: ^3(\d{2})1033(\d{2})(\d{3})$
  *
@@ -120,8 +101,8 @@ export function parseGvpceRoll(input, referenceDate = new Date()) {
 
   // Extraction logic:
   // match[1]: Year of joining (e.g. '24' -> 2024)
-  // match[2]: Branch code (e.g. '11' -> 'Information Technology (IT)')
-  // match[3]: Student unique number (e.g. '037')
+  // match[2]: Branch code (e.g. '14' -> 'Electrical & Electronics Engineering (EEE)')
+  // match[3]: Student unique number (e.g. '068')
   const joiningYear = 2000 + parseInt(match[1], 10);
   const branchCode = match[2];
   const branch = DEPARTMENT_CODES[branchCode] || '';

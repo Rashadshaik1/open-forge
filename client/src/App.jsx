@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import SplashScreen from './components/SplashScreen';
-import DemoSwitcher from './components/DemoSwitcher';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -20,11 +19,37 @@ import CommunityPage from './pages/CommunityPage';
 import GalleryPage from './pages/GalleryPage';
 import PosterPage from './pages/PosterPage';
 
+// Protected Route Guard
+function ProtectedRoute({ children, allowedRoles }) {
+  const { user, isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FFF7ED] dark:bg-[#0B0F17]">
+        <div className="text-xs font-bold text-[#E53E24] animate-pulse">Authenticating session...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    // If unauthorized for this level, send them to their natural landing
+    if (user?.role === 'volunteer') return <Navigate to="/volunteer-scanner" replace />;
+    if (user?.role === 'board' || user?.role === 'admin') return <Navigate to="/admin" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
 function AppContent() {
   const location = useLocation();
   const isGateRoute = location.pathname === '/portal' || location.pathname === '/gate';
 
-  // Splash screen state: display for 1.8 seconds on initial session visit
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -32,35 +57,23 @@ function AppContent() {
     return !sessionStorage.getItem('openforge_splash_shown');
   });
 
-  // Listen to splash parameter trigger from demo switcher or links
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('splash') === 'true') {
-      setShowSplash(true);
-    }
-  }, [location.search]);
-
   const handleSplashFinish = () => {
     setShowSplash(false);
     sessionStorage.setItem('openforge_splash_shown', 'true');
   };
 
-  // If user arrives at root `/` and hasn't passed the role gate this session, show RoleGate
-  const isRoot = location.pathname === '/';
-  const hasPassedGate = typeof window !== 'undefined' && sessionStorage.getItem('openforge_gate_passed') === 'true';
-  const shouldShowGateAtRoot = isRoot && !hasPassedGate;
-
   return (
     <>
       {showSplash && <SplashScreen onFinish={handleSplashFinish} duration={1800} />}
 
-      {isGateRoute || shouldShowGateAtRoot ? (
+      {isGateRoute ? (
         <RoleGate />
       ) : (
         <div className="min-h-screen flex flex-col bg-[#FFF7ED] dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] font-sans selection:bg-[#E53E24]/20 selection:text-[#E53E24] transition-colors duration-200">
           <Navbar />
           <main className="flex-1">
             <Routes>
+              {/* Public Access */}
               <Route path="/" element={<LandingPage />} />
               <Route path="/portal" element={<RoleGate />} />
               <Route path="/gate" element={<RoleGate />} />
@@ -71,19 +84,51 @@ function AppContent() {
               <Route path="/poster" element={<PosterPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/scanner" element={<VolunteerScanner />} />
-              <Route path="/volunteer-scanner" element={<VolunteerScanner />} />
-              <Route path="/admin" element={<AdminPanel />} />
+
+              {/* Student Portal (Any authenticated user) */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={['student', 'volunteer', 'board', 'admin']}>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Staff Terminal (Volunteers, Board, and Admins) */}
+              <Route
+                path="/scanner"
+                element={
+                  <ProtectedRoute allowedRoles={['volunteer', 'board', 'admin']}>
+                    <VolunteerScanner />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/volunteer-scanner"
+                element={
+                  <ProtectedRoute allowedRoles={['volunteer', 'board', 'admin']}>
+                    <VolunteerScanner />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Super Admin & Board Management */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={['board', 'admin']}>
+                    <AdminPanel />
+                  </ProtectedRoute>
+                }
+              />
+
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
           <Footer />
         </div>
       )}
-
-      {/* Floating Demo Role Switcher for Club Day booth presentation */}
-      <DemoSwitcher />
     </>
   );
 }
@@ -97,4 +142,3 @@ export default function App() {
     </AuthProvider>
   );
 }
-

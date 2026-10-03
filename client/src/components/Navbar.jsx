@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, Search, LogOut, Sun, Moon, Sparkles, Printer } from 'lucide-react';
+import { Menu, X, Search, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
@@ -8,7 +8,7 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,7 +32,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-[#0B0F17]/95 backdrop-blur-md border-b border-soft-peach dark:border-gray-800 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-18">
-          {/* Left: OpenForge logo + bold text OPENFORGE with Department Subtitle */}
+          {/* Logo & Subtitle */}
           <Link to="/" className="flex items-center gap-3 group shrink-0">
             <img
               src="/openforgelogo.png"
@@ -49,7 +49,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Center Navigation Links with active bottom indicator bar */}
+          {/* Center Navigation Links */}
           <div className="hidden lg:flex items-center space-x-6">
             {navLinks.map((link) => {
               const isHashLink = link.path.includes('#');
@@ -76,19 +76,9 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right Actions: Portal Shortcut, Theme Toggle, Search, Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-2.5">
-            {/* Campus Role Portal Link */}
-            <Link
-              to="/portal"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-[#E53E24] bg-[#FFF7ED] dark:bg-[#E53E24]/10 hover:bg-[#E53E24]/10 dark:hover:bg-[#E53E24]/20 border border-[#E53E24]/20 transition-colors"
-              title="Campus Role Portal"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Portal</span>
-            </Link>
-
-            {/* Light / Dark Mode Toggle Button */}
+          {/* Right Action Items */}
+          <div className="hidden md:flex items-center space-x-3">
+            {/* Theme Switcher */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -102,23 +92,11 @@ export default function Navbar() {
               )}
             </button>
 
-            {/* Club Day Printable Poster Link */}
-            <Link
-              to="/poster"
-              title="Print Club Day Standee Poster"
-              className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] dark:hover:text-[#E53E24] rounded-lg hover:bg-soft-peach dark:hover:bg-gray-800 transition-colors flex items-center gap-1.5"
-            >
-              <Printer className="w-5 h-5 text-[#E53E24]" />
-              <span className="hidden xl:inline text-xs font-bold text-[#111827] dark:text-white">
-                Club Day Poster
-              </span>
-            </Link>
-
-            {/* Search Button & Popover */}
+            {/* Quick Search */}
             <div className="relative">
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] dark:hover:text-[#E53E24] rounded-lg hover:bg-soft-peach dark:hover:bg-gray-800 transition-colors"
+                className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] dark:hover:text-[#E53E24] rounded-lg hover:bg-soft-peach dark:hover:bg-gray-800 transition-colors cursor-pointer"
                 aria-label="Search"
               >
                 <Search className="w-5 h-5" />
@@ -137,7 +115,7 @@ export default function Navbar() {
                   />
                   <button
                     onClick={() => setSearchOpen(false)}
-                    className="text-xs text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white p-1"
+                    className="text-xs text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white p-1 cursor-pointer"
                   >
                     ✕
                   </button>
@@ -145,24 +123,37 @@ export default function Navbar() {
               )}
             </div>
 
+            {/* Auth Gate Button */}
             {isAuthenticated ? (
               <div className="flex items-center space-x-2.5">
                 <Link
-                  to="/dashboard"
+                  to={
+                    user?.role === 'admin' || user?.role === 'board'
+                      ? '/admin'
+                      : user?.role === 'volunteer'
+                      ? '/scanner'
+                      : '/dashboard'
+                  }
                   className="px-3.5 py-2 text-sm font-semibold rounded-lg text-[#E53E24] bg-[#FFF7ED] dark:bg-gray-800 border border-[#E53E24]/20 hover:bg-[#FFF7ED]/80 transition-colors"
                 >
-                  Dashboard
+                  {user?.role === 'admin'
+                    ? 'Admin Panel'
+                    : user?.role === 'board'
+                    ? 'Board Console'
+                    : user?.role === 'volunteer'
+                    ? 'Scanner Gate'
+                    : 'Dashboard'}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] rounded-lg hover:bg-soft-peach dark:hover:bg-gray-800 transition-colors"
+                  className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] rounded-lg hover:bg-soft-peach dark:hover:bg-gray-800 transition-colors cursor-pointer"
                   title="Log out"
                 >
                   <LogOut className="w-5 h-5" />
                 </button>
               </div>
             ) : (
-              <>
+              <div className="flex items-center space-x-2">
                 <Link
                   to="/login"
                   className="px-4 py-2 text-sm font-semibold text-[#E53E24] border border-[#E53E24] hover:bg-[#FFF7ED] dark:hover:bg-gray-800 rounded-lg transition-colors duration-200"
@@ -173,15 +164,14 @@ export default function Navbar() {
                   to="/register"
                   className="px-4 py-2 text-sm font-semibold text-white bg-[#E53E24] hover:bg-[#CB321A] rounded-lg shadow-sm hover:shadow transition-all duration-200"
                 >
-                  Get Started
+                  Join Us
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
-          {/* Mobile Actions Toggle */}
+          {/* Mobile Hamburger Controls */}
           <div className="flex items-center md:hidden gap-1">
-            {/* Mobile Theme Toggle */}
             <button
               type="button"
               onClick={toggleTheme}
@@ -197,14 +187,14 @@ export default function Navbar() {
 
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] rounded-lg"
+              className="p-2 text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] rounded-lg cursor-pointer"
               aria-label="Search"
             >
               <Search className="w-5 h-5" />
             </button>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] hover:bg-soft-peach dark:hover:bg-gray-800 focus:outline-none"
+              className="p-2 rounded-lg text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] hover:bg-soft-peach dark:hover:bg-gray-800 focus:outline-none cursor-pointer"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -213,23 +203,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile search bar if open */}
-      {searchOpen && (
-        <div className="md:hidden px-4 pb-3">
-          <div className="flex items-center gap-2 px-3 py-2 bg-soft-peach/60 dark:bg-gray-800/80 rounded-xl border border-soft-peach dark:border-gray-700">
-            <Search className="w-4 h-4 text-[#4B5563] dark:text-gray-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search events, workshops..."
-              className="w-full text-sm bg-transparent focus:outline-none text-[#111827] dark:text-white placeholder:text-gray-400"
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-b border-soft-peach dark:border-gray-800 bg-white dark:bg-[#111827] px-4 pt-2 pb-5 space-y-2">
           {navLinks.map((link) => (
@@ -243,37 +217,25 @@ export default function Navbar() {
             </Link>
           ))}
 
-          <Link
-            to="/poster"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-semibold text-[#111827] dark:text-white hover:text-[#E53E24] hover:bg-soft-peach dark:hover:bg-gray-800"
-          >
-            <Printer className="w-4 h-4 text-[#E53E24]" />
-            <span>Club Day Printable Poster</span>
-          </Link>
-
-          <Link
-            to="/portal"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-base font-semibold text-[#E53E24] hover:bg-soft-peach dark:hover:bg-gray-800"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Role Selection Portal</span>
-          </Link>
-
           <div className="pt-3 border-t border-soft-peach dark:border-gray-800 space-y-2">
             {isAuthenticated ? (
               <>
                 <Link
-                  to="/dashboard"
+                  to={
+                    user?.role === 'admin' || user?.role === 'board'
+                      ? '/admin'
+                      : user?.role === 'volunteer'
+                      ? '/scanner'
+                      : '/dashboard'
+                  }
                   onClick={() => setMobileMenuOpen(false)}
                   className="block w-full text-center px-4 py-2.5 rounded-lg bg-soft-peach dark:bg-gray-800 text-[#E53E24] font-semibold text-sm"
                 >
-                  My Dashboard
+                  {user?.role === 'admin' ? 'Admin Panel' : 'My Dashboard'}
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="w-full py-2 text-center text-sm font-semibold text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24]"
+                  className="w-full py-2 text-center text-sm font-semibold text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] cursor-pointer"
                 >
                   Logout
                 </button>
@@ -292,7 +254,7 @@ export default function Navbar() {
                   onClick={() => setMobileMenuOpen(false)}
                   className="text-center px-4 py-2.5 rounded-lg bg-[#E53E24] hover:bg-[#CB321A] text-sm font-semibold text-white shadow-sm"
                 >
-                  Get Started
+                  Join Us
                 </Link>
               </div>
             )}

@@ -1,105 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Star,
   X,
   CheckCircle2,
-  Sparkles,
+  Award,
   MessageSquare,
   Heart,
   Lightbulb,
-  Award,
-  ChevronLeft,
-  ChevronRight,
   Send,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { getEvents, submitFeedback, getEventFeedback } from '../api';
 
-export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle }) {
+export default function EventFeedbackModal({ isOpen, onClose, defaultEventId }) {
   const { user } = useAuth();
 
   const [rating, setRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
-  const [selectedEvent, setSelectedEvent] = useState(
-    defaultEventTitle || 'Sherlock: Next Chapter'
-  );
-  const [studentName, setStudentName] = useState(user?.name || '');
+  const [eventsList, setEventsList] = useState([]);
+  const [selectedEventId, setSelectedEventId] = useState(defaultEventId || '');
   const [feedbackText, setFeedbackText] = useState('');
   const [favoriteMoment, setFavoriteMoment] = useState('');
   const [suggestions, setSuggestions] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reviews, setReviews] = useState([]);
 
-  // Initial mock feedback reviews for display & summary
-  const [reviews, setReviews] = useState([
-    {
-      id: 1,
-      name: 'Rashad Shaik',
-      branch: 'Information Technology (IT)',
-      event: 'Sherlock: The Digital Case',
-      rating: 5,
-      comment:
-        'The cryptographic puzzle trails and on-campus clue hunting were mind-blowing! Over 300 students running around decoding ciphers was peak college energy.',
-      favoriteMoment: 'Decrypting the terminal clue at Tech Block B',
-      date: '2 days ago',
-    },
-    {
-      id: 2,
-      name: 'Pooja Reddy',
-      branch: 'Computer Science (CSE)',
-      event: 'Web Dev Mastery Workshop',
-      rating: 5,
-      comment:
-        'Hands down the best practical workshop of this semester. The mentors explained React components and full-stack API integration with zero fluff.',
-      favoriteMoment: 'Deploying our first live app before lunch break',
-      date: '5 days ago',
-    },
-    {
-      id: 3,
-      name: 'Karthik Varma',
-      branch: 'CSE (AI & Machine Learning)',
-      event: 'Sherlock: The Digital Case',
-      rating: 5,
-      comment:
-        'The QR check-in terminal was super fast and the organization was flawless. OpenForge team really sets the gold standard for tech club events.',
-      favoriteMoment: 'The live leaderboard countdown sprint',
-      date: '1 week ago',
-    },
-    {
-      id: 4,
-      name: 'Bhavya Sri',
-      branch: 'Electronics & Comm (ECE)',
-      event: 'OpenForge Orientation & Club Day',
-      rating: 4,
-      comment:
-        'Loved the vibe, the community introduction, and the roadmap for upcoming hackathons. Excited to contribute as a volunteer!',
-      favoriteMoment: 'Founder keynote and interactive Q&A booth',
-      date: '2 weeks ago',
-    },
-  ]);
+  // Fetch events list for the dropdown
+  useEffect(() => {
+    if (isOpen) {
+      getEvents().then((res) => {
+        const events = res.data?.data || [];
+        setEventsList(events);
+        if (events.length > 0 && !selectedEventId) {
+          setSelectedEventId(events[0]._id);
+        }
+      });
+    }
+  }, [isOpen, selectedEventId]);
 
-  const handleSubmit = (e) => {
+  // Fetch real reviews for selected event
+  const loadFeedbackForEvent = useCallback(async (eventId) => {
+    if (!eventId) return;
+    try {
+      const res = await getEventFeedback(eventId);
+      setReviews(res.data?.data || []);
+    } catch (err) {
+      setReviews([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedEventId) {
+      loadFeedbackForEvent(selectedEventId);
+    }
+  }, [selectedEventId, loadFeedbackForEvent]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!feedbackText.trim()) return;
+    if (!feedbackText.trim() || !selectedEventId) return;
 
-    const newReview = {
-      id: Date.now(),
-      name: studentName.trim() || user?.name || 'GVPCE Innovator',
-      branch: user?.department || 'Information Technology (IT)',
-      event: selectedEvent,
-      rating: rating,
-      comment: feedbackText.trim(),
-      favoriteMoment: favoriteMoment.trim() || 'Collaborative team sprint',
-      date: 'Just now',
-    };
+    try {
+      setIsSubmitting(true);
+      await submitFeedback(selectedEventId, {
+        rating,
+        comment: feedbackText.trim(),
+        favoriteMoment: favoriteMoment.trim(),
+        suggestions: suggestions.trim(),
+      });
 
-    setReviews([newReview, ...reviews]);
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFeedbackText('');
-      setFavoriteMoment('');
-      setSuggestions('');
-      if (onClose) onClose();
-    }, 2200);
+      setSubmitted(true);
+      await loadFeedbackForEvent(selectedEventId);
+
+      setTimeout(() => {
+        setSubmitted(false);
+        setFeedbackText('');
+        setFavoriteMoment('');
+        setSuggestions('');
+        if (onClose) onClose();
+      }, 2000);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to submit review. Confirm attendance was verified.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -145,7 +130,7 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                   Campus Satisfaction Score
                 </div>
                 <div className="text-[11px] text-[#4B5563] dark:text-gray-400">
-                  Based on 180+ verified student check-in reviews
+                  Based on verified student check-in reviews
                 </div>
               </div>
             </div>
@@ -166,44 +151,29 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                 Thank You for Your Review!
               </h3>
               <p className="text-xs text-[#4B5563] dark:text-gray-400 max-w-sm mx-auto">
-                Your feedback has been recorded and will help the OpenForge team forge even stronger campus experiences.
+                Your feedback has been recorded in the database.
               </p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Event & Name selectors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                    Select Event
-                  </label>
-                  <select
-                    value={selectedEvent}
-                    onChange={(e) => setSelectedEvent(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-[#111827] dark:text-white focus:outline-none focus:border-[#E53E24]"
-                  >
-                    <option value="Sherlock: Next Chapter">Sherlock: The Digital Case</option>
-                    <option value="Web Dev Mastery Workshop">Web Dev Mastery Workshop</option>
-                    <option value="OpenForge Orientation & Club Day">OpenForge Orientation & Club Day</option>
-                    <option value="Hackathon 2026: AI & Cloud">Hackathon 2026: AI & Cloud</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1 text-left">
-                  <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                    Your Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={studentName}
-                    onChange={(e) => setStudentName(e.target.value)}
-                    placeholder="e.g. Alex Rivera or anonymous"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#E53E24]"
-                  />
-                </div>
+              <div className="space-y-1 text-left">
+                <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                  Select Event
+                </label>
+                <select
+                  value={selectedEventId}
+                  onChange={(e) => setSelectedEventId(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-medium text-[#111827] dark:text-white focus:outline-none focus:border-[#E53E24]"
+                >
+                  {eventsList.map((e) => (
+                    <option key={e._id} value={e._id}>
+                      {e.title}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Interactive 5-Star Rating Picker */}
+              {/* 5-Star Rating Picker */}
               <div className="p-4 rounded-2xl bg-[#FFF7ED]/60 dark:bg-gray-800/50 border border-[#E53E24]/10 text-center space-y-2">
                 <span className="text-xs font-bold text-[#111827] dark:text-white uppercase tracking-wider">
                   How would you rate your overall experience?
@@ -233,12 +203,6 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                     );
                   })}
                 </div>
-                <div className="text-[11px] font-semibold text-[#E53E24]">
-                  {rating === 5 && 'Outstanding! Loved everything 🔥'}
-                  {rating === 4 && 'Great event, very informative ✨'}
-                  {rating === 3 && 'Good experience with scope to grow'}
-                  {rating <= 2 && 'Needs improvement'}
-                </div>
               </div>
 
               {/* Review Text */}
@@ -257,7 +221,7 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                 />
               </div>
 
-              {/* Favorite Moment & Suggestions */}
+              {/* Highlights & Suggestions */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1 text-left">
                   <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
@@ -288,51 +252,42 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                 </div>
               </div>
 
-              {/* Submit Button */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#E53E24] to-[#F97316] hover:opacity-95 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  disabled={isSubmitting}
+                  className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-[#E53E24] to-[#F97316] hover:opacity-95 shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  <Send className="w-4 h-4" />
+                  {isSubmitting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                   <span>Submit My Event Review</span>
                 </button>
               </div>
             </form>
           )}
 
-          {/* Recent Student Feedback Showcase Carousel/Grid */}
+          {/* Real Reviews */}
           <div className="pt-4 border-t border-soft-peach dark:border-gray-800 space-y-3 text-left">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-[#111827] dark:text-white uppercase tracking-wider">
-                Recent Student Testimonials
-              </span>
-              <span className="text-[11px] text-[#4B5563] dark:text-gray-400">
-                {reviews.length} Verified Reviews
-              </span>
-            </div>
+            <span className="text-xs font-bold text-[#111827] dark:text-white uppercase tracking-wider block">
+              Verified Event Reviews ({reviews.length})
+            </span>
 
             <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
               {reviews.map((rev) => (
                 <div
-                  key={rev.id}
+                  key={rev._id}
                   className="p-3.5 rounded-2xl bg-[#FFF7ED]/50 dark:bg-gray-800/40 border border-soft-peach dark:border-gray-700/80 space-y-1.5"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-[#111827] dark:text-white">
-                        {rev.name}
-                      </span>
-                      <span className="text-[10px] text-[#E53E24] font-semibold bg-[#FFF7ED] dark:bg-gray-800 px-2 py-0.5 rounded-full border border-[#E53E24]/20">
-                        {rev.branch}
-                      </span>
-                    </div>
+                    <span className="text-xs font-bold text-[#111827] dark:text-white">
+                      {rev.user?.name || 'Verified Attendee'}
+                    </span>
                     <div className="flex items-center gap-0.5">
-                      {Array.from({ length: rev.rating }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className="w-3 h-3 fill-amber-400 text-amber-400"
-                        />
+                      {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                        <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
                       ))}
                     </div>
                   </div>
@@ -340,13 +295,6 @@ export default function EventFeedbackModal({ isOpen, onClose, defaultEventTitle 
                   <p className="text-xs text-[#4B5563] dark:text-gray-300 leading-relaxed italic">
                     "{rev.comment}"
                   </p>
-
-                  <div className="flex items-center justify-between text-[10px] text-[#4B5563] dark:text-gray-400 pt-1">
-                    <span className="text-[#F97316] font-medium">
-                      🎯 Favorite: {rev.favoriteMoment}
-                    </span>
-                    <span>{rev.date}</span>
-                  </div>
                 </div>
               ))}
             </div>

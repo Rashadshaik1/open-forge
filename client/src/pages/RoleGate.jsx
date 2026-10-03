@@ -7,11 +7,12 @@ import {
   ArrowRight,
   Lock,
   Sparkles,
-  ExternalLink,
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function RoleGate() {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleEnterPublic = (e) => {
     if (e) e.preventDefault();
@@ -19,9 +20,28 @@ export default function RoleGate() {
     navigate('/');
   };
 
-  const handleRoleLogin = (role) => {
+  const handleRoleSelection = (targetRole) => {
     sessionStorage.setItem('openforge_gate_passed', 'true');
-    navigate(`/login?role=${role}`);
+
+    // If already authenticated with this matching role, route directly to the tool
+    if (isAuthenticated && user?.role === targetRole) {
+      if (targetRole === 'volunteer') {
+        navigate('/volunteer-scanner');
+      } else if (targetRole === 'board' || targetRole === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+      return;
+    }
+
+    // If authenticated under a different role, log out to ensure clean token state
+    if (isAuthenticated && user?.role !== targetRole) {
+      logout();
+    }
+
+    // Direct to role-prefixed login
+    navigate(`/login?role=${targetRole}`);
   };
 
   return (
@@ -94,7 +114,6 @@ export default function RoleGate() {
               </div>
             </div>
 
-            {/* Student Buttons: Enter Public Portal & Sign Up / Login */}
             <div className="space-y-2 pt-2 border-t border-soft-peach dark:border-gray-800">
               <button
                 onClick={handleEnterPublic}
@@ -105,7 +124,7 @@ export default function RoleGate() {
               </button>
 
               <button
-                onClick={() => handleRoleLogin('student')}
+                onClick={() => handleRoleSelection('student')}
                 className="w-full py-2 px-3 rounded-xl bg-white dark:bg-gray-800 border border-primary/30 hover:border-primary text-primary text-xs font-semibold text-center block transition-all cursor-pointer"
               >
                 Sign Up / Login
@@ -133,17 +152,16 @@ export default function RoleGate() {
               </div>
             </div>
 
-            {/* Volunteer Login Only */}
             <div className="pt-2 border-t border-soft-peach dark:border-gray-800">
               <button
-                onClick={() => handleRoleLogin('volunteer')}
-                className="w-full py-2.5 px-3 rounded-xl bg-[#F97316] hover:bg-orange-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5"
+                onClick={() => handleRoleSelection('volunteer')}
+                className="w-full py-2.5 px-3 rounded-xl bg-[#F97316] hover:bg-orange-600 text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Volunteer Login</span>
+                <span>Volunteer Terminal</span>
               </button>
               <div className="text-[10px] text-center text-[#4B5563] dark:text-gray-400 mt-2">
-                No signup • Creds issued
+                Scanner Terminal &bull; Staff Creds
               </div>
             </div>
           </div>
@@ -168,17 +186,16 @@ export default function RoleGate() {
               </div>
             </div>
 
-            {/* Board Login Only */}
             <div className="pt-2 border-t border-soft-peach dark:border-gray-800">
               <button
-                onClick={() => handleRoleLogin('board')}
-                className="w-full py-2.5 px-3 rounded-xl bg-[#E53E24] hover:bg-[#CB321A] text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5"
+                onClick={() => handleRoleSelection('board')}
+                className="w-full py-2.5 px-3 rounded-xl bg-[#E53E24] hover:bg-[#CB321A] text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Board Login</span>
+                <span>Board Console</span>
               </button>
               <div className="text-[10px] text-center text-[#4B5563] dark:text-gray-400 mt-2">
-                No signup • Creds issued
+                Event Oversight &bull; Board Creds
               </div>
             </div>
           </div>
@@ -203,24 +220,22 @@ export default function RoleGate() {
               </div>
             </div>
 
-            {/* Admin Login Only */}
             <div className="pt-2 border-t border-soft-peach dark:border-gray-800">
               <button
-                onClick={() => handleRoleLogin('admin')}
-                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5"
+                onClick={() => handleRoleSelection('admin')}
+                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>Admin Login</span>
+                <span>Admin Console</span>
               </button>
               <div className="text-[10px] text-center text-[#4B5563] dark:text-gray-400 mt-2">
-                No signup • Creds issued
+                Full Authorization
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Footer Note */}
       <div className="text-center text-xs text-[#4B5563] dark:text-gray-400 pt-6">
         OpenForge Community Portal &bull; GVPCE Campus Event Operations &bull; Need access? Contact the Super Admin
       </div>

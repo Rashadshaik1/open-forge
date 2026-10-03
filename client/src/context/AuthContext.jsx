@@ -37,15 +37,28 @@ export const AuthProvider = ({ children }) => {
           : emailOrCredentials;
 
       const response = await api.post('/auth/login', payload);
-      const { token: receivedToken, user: receivedUser } = response.data;
+
+      // Support backend data structure where token and user fields are in response.data.data
+      const authData = response.data?.data || response.data;
+      const receivedToken = authData?.token;
+      const receivedUser = authData?.user || authData;
+
+      if (!receivedToken) {
+        return {
+          success: false,
+          error: 'No authentication token received from the server.',
+        };
+      }
 
       localStorage.setItem('token', receivedToken);
       localStorage.setItem('user', JSON.stringify(receivedUser));
 
       setToken(receivedToken);
       setUser(receivedUser);
+
       return { success: true, data: response.data, user: receivedUser };
     } catch (error) {
+      console.error('Login error:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Invalid email or password',
@@ -56,7 +69,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const response = await api.post('/auth/register', userData);
-      const { token: receivedToken, user: receivedUser } = response.data;
+
+      const authData = response.data?.data || response.data;
+      const receivedToken = authData?.token;
+      const receivedUser = authData?.user || authData;
 
       if (receivedToken && receivedUser) {
         localStorage.setItem('token', receivedToken);
@@ -64,8 +80,10 @@ export const AuthProvider = ({ children }) => {
         setToken(receivedToken);
         setUser(receivedUser);
       }
-      return { success: true, data: response.data };
+
+      return { success: true, data: response.data, user: receivedUser };
     } catch (error) {
+      console.error('Registration error:', error);
       return {
         success: false,
         error: error.response?.data?.message || 'Registration failed',
@@ -80,18 +98,6 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  const switchDemoUser = (demoUser) => {
-    const mockToken = `mock-token-${demoUser.role || 'user'}-${Date.now()}`;
-    localStorage.setItem('token', mockToken);
-    localStorage.setItem('user', JSON.stringify(demoUser));
-    setToken(mockToken);
-    setUser(demoUser);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('openforge_gate_passed', 'true');
-    }
-    return demoUser;
-  };
-
   const value = {
     user,
     token,
@@ -100,7 +106,6 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    switchDemoUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
