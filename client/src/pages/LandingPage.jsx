@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Loader2,
   Sparkles,
+  MessageSquare,
 } from 'lucide-react';
 import EventCard from '../components/EventCard';
 import { getEvents, getTeam } from '../api';
@@ -118,12 +119,13 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4" />
                 </a>
 
+                {/* Redirects to Community Forum */}
                 <Link
-                  to="/register"
+                  to="/community"
                   className="rounded-full px-6 py-3 bg-white dark:bg-gray-800 border border-[#E53E24]/30 hover:border-[#E53E24] text-[#E53E24] dark:text-white font-semibold flex items-center gap-2 hover:bg-soft-peach/60 dark:hover:bg-gray-700 shadow-xs transition-all duration-200"
                 >
-                  <Users className="w-4 h-4 text-[#E53E24]" />
-                  <span>Join OpenForge</span>
+                  <MessageSquare className="w-4 h-4 text-[#E53E24]" />
+                  <span>Join OpenForge Community</span>
                 </Link>
               </div>
             </div>
@@ -235,7 +237,6 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          {/* Exact 16:9 container with edge-to-edge coverage */}
           <div className="relative rounded-3xl overflow-hidden border-2 border-soft-peach dark:border-gray-800 shadow-xl aspect-video w-full group">
             <img
               src="/team-full.jpg"

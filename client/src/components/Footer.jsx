@@ -2,12 +2,12 @@ import { Link } from 'react-router-dom';
 
 export default function Footer() {
   const footerLinks = [
-    { name: 'Events', path: '/#events', isHash: true },
-    { name: 'Gallery', path: '/gallery', isHash: false },
-    { name: 'Poster', path: '/poster', isHash: false },
-    { name: 'Community', path: '/community', isHash: false },
-    { name: 'Team', path: '/team', isHash: false },
-    { name: 'About', path: '/about', isHash: false },
+    { name: 'Events', path: '/events' },
+    { name: 'Gallery', path: '/gallery' },
+    { name: 'Poster', path: '/poster' },
+    { name: 'Community', path: '/community' },
+    { name: 'Team', path: '/team' },
+    { name: 'About', path: '/about' },
   ];
 
   return (
@@ -39,25 +39,15 @@ export default function Footer() {
 
           {/* Center Links */}
           <nav className="flex flex-wrap items-center justify-center gap-6 text-sm font-medium text-[#4B5563] dark:text-gray-300">
-            {footerLinks.map((link) =>
-              link.isHash ? (
-                <a
-                  key={link.name}
-                  href={link.path}
-                  className="hover:text-[#E53E24] dark:hover:text-[#E53E24] transition-colors duration-150"
-                >
-                  {link.name}
-                </a>
-              ) : (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  className="hover:text-[#E53E24] dark:hover:text-[#E53E24] transition-colors duration-150"
-                >
-                  {link.name}
-                </Link>
-              )
-            )}
+            {footerLinks.map((link) => (
+              <Link
+                key={link.name}
+                to={link.path}
+                className="hover:text-[#E53E24] dark:hover:text-[#E53E24] transition-colors duration-150"
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
 
           {/* Right: Social icons + Slogan */}
@@ -108,7 +98,7 @@ export default function Footer() {
               </a>
             </div>
 
-            {/* Handwritten style slogan */}
+            {/* Slogan */}
             <span className="font-serif italic text-xs tracking-wider text-[#E53E24] font-medium">
               Ideas. People. Impact.
             </span>

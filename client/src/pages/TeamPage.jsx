@@ -7,6 +7,8 @@ import {
   Quote,
   Loader2,
   Users2,
+  Building2,
+  Calendar,
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/SocialIcons';
 import { getTeam } from '../api';
@@ -23,7 +25,6 @@ export default function TeamPage() {
         const res = await getTeam();
         const payload = res.data?.data || {};
 
-        // Normalizes both array format and keyed { faculty, board, volunteers } formats
         if (Array.isArray(payload)) {
           setTeamData({
             faculty: payload.filter((m) => m.tier === 'faculty' || m.role === 'faculty'),
@@ -94,7 +95,7 @@ export default function TeamPage() {
       </section>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
         {loading ? (
           <div className="py-24 flex flex-col items-center justify-center text-[#4B5563] space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-[#E53E24]" />
@@ -114,7 +115,7 @@ export default function TeamPage() {
           <>
             {/* TIER 1: FACULTY COORDINATORS */}
             {(activeFilter === 'all' || activeFilter === 'faculty') && facultyList.length > 0 && (
-              <section className="space-y-6">
+              <section className="space-y-8">
                 <div className="flex items-center gap-3 border-b border-soft-peach dark:border-gray-800 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] flex items-center justify-center shadow-xs">
                     <GraduationCap className="w-6 h-6" />
@@ -123,70 +124,88 @@ export default function TeamPage() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#E53E24]">
                       Academic Guidance
                     </span>
-                    <h2 className="text-2xl font-extrabold text-[#111827] dark:text-white">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
                       Faculty Coordinators & Mentors
                     </h2>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {facultyList.map((fac) => {
-                    const id = fac._id || fac.id;
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {facultyList.map((fac, idx) => {
+                    const id = fac._id || fac.id || `fac-${idx}`;
+                    const photo = fac.avatar || fac.photoUrl;
+
                     return (
                       <div
                         key={id}
-                        className="bg-white dark:bg-[#111827] rounded-3xl p-6 border border-soft-peach dark:border-gray-800 shadow-xs flex flex-col justify-between space-y-6"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-4">
-                            {fac.avatar || fac.photoUrl ? (
-                              <img
-                                src={fac.avatar || fac.photoUrl}
-                                alt={fac.name}
-                                className="w-16 h-16 rounded-2xl object-cover border-2 border-[#E53E24]/20 shadow-xs shrink-0"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 rounded-2xl bg-[#E53E24]/10 text-[#E53E24] flex items-center justify-center font-black text-xl border border-[#E53E24]/20 shrink-0">
-                                {fac.name?.charAt(0) || 'F'}
-                              </div>
-                            )}
+                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
+                          {photo ? (
+                            <img
+                              src={photo}
+                              alt={fac.name}
+                              className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-24 h-24 rounded-full bg-[#E53E24]/10 text-[#E53E24] flex items-center justify-center font-black text-4xl">
+                              {fac.name?.charAt(0) || 'F'}
+                            </div>
+                          )}
 
-                            <div className="space-y-0.5">
-                              <h3 className="font-extrabold text-base sm:text-lg text-[#111827] dark:text-white">
+                          {/* Hover Gradient Shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                          <div className="absolute top-4 left-4 z-10">
+                            <span className="px-3.5 py-1 rounded-full text-xs font-bold shadow-md uppercase tracking-wider bg-stone-900 text-white">
+                              Faculty Mentor
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-5">
+                          <div className="space-y-3">
+                            <div>
+                              <h3 className="text-xl font-extrabold text-[#111827] dark:text-white">
                                 {fac.name}
                               </h3>
-                              <p className="text-xs font-semibold text-[#E53E24]">
-                                {fac.designation || 'Faculty Mentor'}
+                              <p className="text-xs font-bold text-[#E53E24] mt-0.5">
+                                {fac.designation || 'Assistant Professor, Dept of IT'}
                               </p>
-                              <p className="text-[11px] text-[#4B5563] dark:text-gray-400">
+                              <p className="text-xs text-[#4B5563] dark:text-gray-400 mt-1">
                                 {fac.department || 'Department of Information Technology'}
                               </p>
                             </div>
+
+                            {fac.message && (
+                              <div className="p-4 rounded-2xl bg-[#FFF7ED]/50 dark:bg-gray-800/50 border border-soft-peach dark:border-gray-700/80">
+                                <Quote className="w-4 h-4 text-[#F97316] mb-1 opacity-70" />
+                                <p className="text-xs text-[#4B5563] dark:text-gray-300 leading-relaxed italic">
+                                  "{fac.message}"
+                                </p>
+                              </div>
+                            )}
                           </div>
 
-                          {fac.message && (
-                            <div className="p-4 rounded-2xl bg-[#FFF7ED]/50 dark:bg-gray-800/50 border border-soft-peach dark:border-gray-700/80">
-                              <Quote className="w-4 h-4 text-[#F97316] mb-1 opacity-70" />
-                              <p className="text-xs text-[#4B5563] dark:text-gray-300 leading-relaxed italic">
-                                "{fac.message}"
-                              </p>
-                            </div>
-                          )}
+                          <div className="pt-4 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
+                            <span className="text-xs text-gray-400 font-semibold flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5" /> GVPCE Autonomous
+                            </span>
+
+                            {fac.linkedin && (
+                              <a
+                                href={fac.linkedin}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-2 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
+                                title="LinkedIn Profile"
+                              >
+                                <LinkedinIcon className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
                         </div>
-
-                        {fac.linkedin && (
-                          <div className="pt-2 flex items-center gap-2">
-                            <a
-                              href={fac.linkedin}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-[#4B5563] dark:text-gray-400 hover:text-[#E53E24] flex items-center gap-1.5 transition-colors"
-                            >
-                              <LinkedinIcon className="w-3.5 h-3.5" />
-                              <span>Professional Profile</span>
-                            </a>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -196,7 +215,7 @@ export default function TeamPage() {
 
             {/* TIER 2: BOARD MEMBERS */}
             {(activeFilter === 'all' || activeFilter === 'board') && boardList.length > 0 && (
-              <section className="space-y-6">
+              <section className="space-y-8">
                 <div className="flex items-center gap-3 border-b border-soft-peach dark:border-gray-800 pb-4">
                   <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-gray-800 text-[#F97316] flex items-center justify-center shadow-xs">
                     <Shield className="w-6 h-6" />
@@ -205,70 +224,98 @@ export default function TeamPage() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#F97316]">
                       Student Leadership & Governance
                     </span>
-                    <h2 className="text-2xl font-extrabold text-[#111827] dark:text-white">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
                       Core Board Members
                     </h2>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {boardList.map((member) => {
-                    const id = member._id || member.rollNumber;
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {boardList.map((member, idx) => {
+                    const id = member._id || member.rollNumber || `board-${idx}`;
+                    const photo = member.avatar || member.photoUrl;
+
                     return (
                       <div
                         key={id}
-                        className="bg-white dark:bg-[#111827] rounded-3xl p-6 border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col justify-between space-y-5"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3.5">
-                            {member.avatar || member.photoUrl ? (
-                              <img
-                                src={member.avatar || member.photoUrl}
-                                alt={member.name}
-                                className="w-14 h-14 rounded-2xl object-cover border border-[#F97316]/30 shadow-xs shrink-0"
-                              />
-                            ) : (
-                              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 text-[#F97316] flex items-center justify-center font-bold text-lg border border-[#F97316]/20 shrink-0">
-                                {member.name?.charAt(0) || 'B'}
-                              </div>
-                            )}
-
-                            <div>
-                              <h3 className="font-extrabold text-base text-[#111827] dark:text-white">
-                                {member.name}
-                              </h3>
-                              <p className="text-xs font-bold text-[#F97316] uppercase tracking-wider mt-0.5">
-                                {member.designation || (member.role === 'admin' ? 'Lead Admin' : 'Board Member')}
-                              </p>
-                              {member.rollNumber && (
-                                <p className="font-mono text-[11px] text-[#4B5563] dark:text-gray-400 mt-0.5">
-                                  {member.rollNumber}
-                                </p>
-                              )}
+                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
+                          {photo ? (
+                            <img
+                              src={photo}
+                              alt={member.name}
+                              className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-orange-500/10 text-[#F97316] flex items-center justify-center font-black text-3xl">
+                              {member.name?.charAt(0) || 'B'}
                             </div>
-                          </div>
+                          )}
 
-                          <p className="text-xs text-[#4B5563] dark:text-gray-300 leading-relaxed">
-                            {member.department || 'Department of Information Technology'}
-                          </p>
+                          {/* Hover Gradient Shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                          <div className="absolute top-4 left-4 z-10">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold shadow-md uppercase tracking-wider bg-orange-600 text-white">
+                              {member.role === 'admin' ? 'Super Admin' : 'Executive Board'}
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            Core Board Lead
-                          </span>
-                          <div className="flex items-center gap-2 text-[#4B5563]">
-                            {member.linkedin && (
-  <a href={member.linkedin} target="_blank" rel="noreferrer" className="hover:text-[#E53E24]">
-    <LinkedinIcon className="w-3.5 h-3.5" />
-  </a>
-)}
-{member.github && (
-  <a href={member.github} target="_blank" rel="noreferrer" className="hover:text-[#E53E24]">
-    <GithubIcon className="w-3.5 h-3.5" />
-  </a>
-)}
+                        <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
+                          <div className="space-y-1.5">
+                            <h3 className="text-lg font-extrabold text-[#111827] dark:text-white">
+                              {member.name}
+                            </h3>
+                            <p className="text-xs font-bold text-[#F97316] uppercase tracking-wider">
+                              {member.designation || (member.role === 'admin' ? 'Lead Administrator' : 'Core Committee')}
+                            </p>
+                            <p className="text-xs text-[#4B5563] dark:text-gray-400">
+                              {member.department || 'Information Technology'}
+                            </p>
+
+                            {/* Study Year Display */}
+                            {member.year && (
+                              <div className="pt-1">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] border border-[#E53E24]/20">
+                                  <Calendar className="w-3 h-3" />
+                                  <span>{member.year}</span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-4 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
+                            <span className="font-mono text-xs font-bold text-[#E53E24]">
+                              {member.rollNumber || 'GVPCE Core'}
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              {member.linkedin && (
+                                <a
+                                  href={member.linkedin}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-2 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
+                                  title="LinkedIn"
+                                >
+                                  <LinkedinIcon className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              {member.github && (
+                                <a
+                                  href={member.github}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-[#111827] dark:text-gray-200 hover:bg-black hover:text-white transition-all shadow-2xs"
+                                  title="GitHub"
+                                >
+                                  <GithubIcon className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -280,7 +327,7 @@ export default function TeamPage() {
 
             {/* TIER 3: STUDENT VOLUNTEERS */}
             {(activeFilter === 'all' || activeFilter === 'volunteers') && volunteerList.length > 0 && (
-              <section className="space-y-6">
+              <section className="space-y-8">
                 <div className="flex items-center justify-between border-b border-soft-peach dark:border-gray-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-gray-800 text-purple-600 flex items-center justify-center shadow-xs">
@@ -288,49 +335,93 @@ export default function TeamPage() {
                     </div>
                     <div>
                       <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600">
-                        Ground Operations & Scanners
+                        Ground Operations & Verification
                       </span>
-                      <h2 className="text-2xl font-extrabold text-[#111827] dark:text-white">
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
                         Student Volunteers
                       </h2>
                     </div>
                   </div>
 
-                  <span className="text-xs font-semibold text-[#4B5563] dark:text-gray-400">
+                  <span className="text-xs font-bold text-purple-700 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 px-3 py-1 rounded-full">
                     {volunteerList.length} Active Field Staff
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {volunteerList.map((vol) => {
-                    const id = vol._id || vol.rollNumber;
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                  {volunteerList.map((vol, idx) => {
+                    const id = vol._id || vol.rollNumber || `vol-${idx}`;
+                    const photo = vol.avatar || vol.photoUrl;
+
                     return (
                       <div
                         key={id}
-                        className="p-4 rounded-2xl bg-white dark:bg-[#111827] border border-soft-peach dark:border-gray-800 shadow-xs flex items-center gap-3.5"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {vol.avatar || vol.photoUrl ? (
-                          <img
-                            src={vol.avatar || vol.photoUrl}
-                            alt={vol.name}
-                            className="w-12 h-12 rounded-xl object-cover border border-purple-500/20 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold text-sm border border-purple-500/20 shrink-0">
-                            {vol.name?.charAt(0) || 'V'}
-                          </div>
-                        )}
+                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-purple-50 to-stone-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
+                          {photo ? (
+                            <img
+                              src={photo}
+                              alt={vol.name}
+                              className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-purple-500/10 text-purple-600 flex items-center justify-center font-black text-2xl">
+                              {vol.name?.charAt(0) || 'V'}
+                            </div>
+                          )}
 
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm text-[#111827] dark:text-white truncate">
-                            {vol.name}
-                          </h4>
-                          <p className="text-[11px] font-mono text-[#4B5563] dark:text-gray-400 truncate">
-                            {vol.rollNumber || 'GVPCE Staff'}
-                          </p>
-                          <p className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold truncate">
-                            {vol.department || 'Event Crew'}
-                          </p>
+                          {/* Hover Gradient Shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
+                          <div className="absolute top-3 left-3 z-10">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-purple-600 text-white">
+                              Scanner Crew
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1">
+                            <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
+                              {vol.name}
+                            </h4>
+                            <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                              {vol.designation || 'Field Coordinator'}
+                            </p>
+                            <p className="text-[11px] text-[#4B5563] dark:text-gray-400 truncate">
+                              {vol.department || 'Information Technology'}
+                            </p>
+
+                            {/* Study Year Display */}
+                            {vol.year && (
+                              <div className="pt-1">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                  <Calendar className="w-2.5 h-2.5" />
+                                  <span>{vol.year}</span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-[#E53E24]">
+                              {vol.rollNumber || 'Volunteer'}
+                            </span>
+
+                            {vol.linkedin && (
+                              <a
+                                href={vol.linkedin}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 rounded-lg bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
+                                title="LinkedIn"
+                              >
+                                <LinkedinIcon className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

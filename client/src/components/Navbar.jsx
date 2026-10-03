@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Menu, X, Search, LogOut, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,7 +11,6 @@ export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -21,7 +20,7 @@ export default function Navbar() {
 
   const navLinks = [
     { name: 'Home', path: '/' },
-    { name: 'Events', path: '/#events' },
+    { name: 'Events', path: '/events' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Community', path: '/community' },
     { name: 'Team', path: '/team' },
@@ -51,29 +50,28 @@ export default function Navbar() {
 
           {/* Center Navigation Links */}
           <div className="hidden lg:flex items-center space-x-6">
-            {navLinks.map((link) => {
-              const isHashLink = link.path.includes('#');
-              const isActive = isHashLink
-                ? location.pathname === '/' && location.hash === link.path.replace('/', '')
-                : location.pathname === link.path && !location.hash;
-
-              return (
-                <NavLink
-                  key={link.name}
-                  to={link.path}
-                  className={`relative py-5 text-sm font-semibold transition-colors duration-200 ${
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.name}
+                to={link.path}
+                className={({ isActive }) =>
+                  `relative py-5 text-sm font-semibold transition-colors duration-200 ${
                     isActive
                       ? 'text-[#E53E24]'
                       : 'text-[#4B5563] dark:text-gray-300 hover:text-[#E53E24] dark:hover:text-[#E53E24]'
-                  }`}
-                >
-                  {link.name}
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full shadow-xs" />
-                  )}
-                </NavLink>
-              );
-            })}
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <span>{link.name}</span>
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full shadow-xs" />
+                    )}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </div>
 
           {/* Right Action Items */}

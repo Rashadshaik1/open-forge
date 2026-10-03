@@ -18,6 +18,8 @@ import AboutPage from './pages/AboutPage';
 import CommunityPage from './pages/CommunityPage';
 import GalleryPage from './pages/GalleryPage';
 import PosterPage from './pages/PosterPage';
+import EventsPage from './pages/EventsPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Protected Route Guard
 function ProtectedRoute({ children, allowedRoles }) {
@@ -84,6 +86,9 @@ function AppContent() {
               <Route path="/poster" element={<PosterPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/events" element={<EventsPage />} />
+              <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+              
 
               {/* Student Portal (Any authenticated user) */}
               <Route

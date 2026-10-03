@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema(
     rollNumber: {
       type: String,
       required: [true, 'Roll number is required'],
+      unique: true,
       uppercase: true,
       trim: true,
     },
@@ -46,6 +47,37 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+    },
+    // Profile & Directory details (Supports Base64 data strings & URL links)
+    avatar: {
+      type: String,
+      default: '',
+    },
+    photoUrl: {
+      type: String,
+      default: '',
+    },
+    designation: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    linkedin: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    github: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    // Password reset fields
+    resetPasswordToken: {
+      type: String,
+    },
+    resetPasswordExpire: {
+      type: Date,
     },
   },
   {

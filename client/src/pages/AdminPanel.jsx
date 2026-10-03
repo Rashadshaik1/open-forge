@@ -1,10 +1,9 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Shield,
   Plus,
   Users,
   Calendar,
-  Download,
   Edit2,
   Trash2,
   CheckCircle2,
@@ -16,8 +15,10 @@ import {
   FileSpreadsheet,
   MapPin,
   Loader2,
-  Image as ImageIcon,
+  Upload,
   Globe,
+  X,
+  Download,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { parseGvpceRoll } from '../utils/parseRollNumber';
@@ -29,15 +30,15 @@ import {
   deleteEvent,
   toggleEventRegistration,
   getEventRoster,
-  getAttendanceExportUrl,
 } from '../api';
 
 export default function AdminPanel() {
   const { user } = useAuth();
+  const fileInputRef = useRef(null);
 
   const currentRole = user?.role || 'admin';
   const isAdmin = currentRole === 'admin';
-  const roleBadgeText = isAdmin ? 'Super Admin' : 'Board Member';
+  const roleBadgeText = isAdmin ? 'Executive Administrator' : 'Board Representative';
 
   const [activeTab, setActiveTab] = useState('attendance');
   const [successToast, setSuccessToast] = useState('');
@@ -54,7 +55,7 @@ export default function AdminPanel() {
     try {
       setLoadingEvents(true);
       const res = await getEvents();
-      const events = res.data?.data || [];
+      const events = res.data?.data || res.data || [];
       setEventsList(events);
 
       if (events.length > 0 && !selectedEventId) {
@@ -108,10 +109,10 @@ export default function AdminPanel() {
 
   const filteredStudents = useMemo(() => {
     return roster.filter((reg) => {
-      const studentName = reg.user?.name || '';
-      const rollNumber = reg.user?.rollNumber || '';
-      const department = reg.user?.department || '';
-      const year = reg.user?.year || '';
+      const studentName = reg.user?.name || reg.studentName || '';
+      const rollNumber = reg.user?.rollNumber || reg.rollNumber || '';
+      const department = reg.user?.department || reg.department || '';
+      const year = reg.user?.year || reg.year || '';
 
       const matchesSearch =
         studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -123,20 +124,49 @@ export default function AdminPanel() {
     });
   }, [roster, searchQuery, selectedDept, selectedYear]);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     if (!selectedEventId) {
       alert('Please select an event to export.');
       return;
     }
-    window.open(getAttendanceExportUrl(selectedEventId), '_blank');
-    setSuccessToast('✓ Downloading verified attendance sheet...');
-    setTimeout(() => setSuccessToast(''), 4000);
+
+    try {
+      setSuccessToast('Generating verified attendance report...');
+
+      const response = await api.get(`/registrations/event/${selectedEventId}/export-csv`, {
+        responseType: 'blob',
+      });
+
+      const currentEvt = eventsList.find((e) => e._id === selectedEventId);
+      const safeTitle = (currentEvt?.title || 'Attendance').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `${safeTitle}_Attendance_${new Date().toISOString().slice(0, 10)}.csv`;
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSuccessToast(`✓ Downloaded ${filename}`);
+    } catch (err) {
+      console.error('Failed to export CSV:', err);
+      alert('Failed to download attendance CSV. Ensure you have authorized access.');
+    } finally {
+      setTimeout(() => setSuccessToast(''), 4000);
+    }
   };
 
   const handleToggleAttendance = async (reg) => {
     try {
       if (!reg.attended) {
-        await api.post('/registrations/verify-ticket', { ticketCode: reg.ticketCode });
+        await api.post('/registrations/verify-ticket', {
+          ticketCode: reg.ticketCode,
+          identifier: reg.ticketCode,
+        });
         setSuccessToast(`✓ Marked ${reg.user?.name || 'Student'} as Attended.`);
       } else {
         alert('Attendance has already been verified and locked for this ticket.');
@@ -252,27 +282,38 @@ export default function AdminPanel() {
   // ----------------------------------------------------
   const [roleSearchRoll, setRoleSearchRoll] = useState('');
   const [selectedNewRole, setSelectedNewRole] = useState('volunteer');
-  const [memberPhotoUrl, setMemberPhotoUrl] = useState('');
+  const [memberPhotoBase64, setMemberPhotoBase64] = useState('');
+  const [isPhotoExplicitlyDeleted, setIsPhotoExplicitlyDeleted] = useState(false);
   const [memberDesignation, setMemberDesignation] = useState('');
   const [memberLinkedin, setMemberLinkedin] = useState('');
+  const [editingUserId, setEditingUserId] = useState(null);
+
   const [usersList, setUsersList] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userDirectorySearch, setUserDirectorySearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('All');
 
   const fetchUsersDirectory = useCallback(async () => {
     if (!isAdmin) return;
     try {
       setLoadingUsers(true);
-      const res = await api.get('/team');
-      const teamData = res.data?.data || {};
+      let res;
+      try {
+        res = await api.get('/team/all-members');
+      } catch {
+        res = await api.get('/team');
+      }
+
+      const teamData = res.data?.data || res.data || [];
 
       let combined = [];
       if (Array.isArray(teamData)) {
         combined = teamData;
       } else {
         combined = [
-          ...(teamData.faculty || []),
           ...(teamData.board || []),
           ...(teamData.volunteers || []),
+          ...(teamData.faculty || []),
         ];
       }
       setUsersList(combined);
@@ -291,27 +332,102 @@ export default function AdminPanel() {
 
   const liveParsedRoleSearch = parseGvpceRoll(roleSearchRoll);
 
+  const handleImageFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Selected image size must be under 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setMemberPhotoBase64(reader.result);
+      setIsPhotoExplicitlyDeleted(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Explicit photo removal
+  const handleRemovePhoto = () => {
+    setMemberPhotoBase64('');
+    setIsPhotoExplicitlyDeleted(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Download currently loaded photo
+  const handleDownloadPhoto = () => {
+    if (!memberPhotoBase64) return;
+    const link = document.createElement('a');
+    link.href = memberPhotoBase64;
+    link.download = `${roleSearchRoll || 'member'}_profile_photo.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleClearEditMode = () => {
+    setEditingUserId(null);
+    setRoleSearchRoll('');
+    setMemberDesignation('');
+    setMemberPhotoBase64('');
+    setIsPhotoExplicitlyDeleted(false);
+    setMemberLinkedin('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Quick Inline Role Change from Directory Table
+  const handleQuickRoleChange = async (targetUser, newRole) => {
+    try {
+      setSuccessToast(`Updating ${targetUser.name} to ${newRole}...`);
+
+      const targetId = targetUser._id || targetUser.rollNumber;
+      await api.patch(`/team/role/${targetId}`, {
+        role: newRole,
+        rollNumber: targetUser.rollNumber,
+      });
+
+      setSuccessToast(`✓ ${targetUser.name} is now a ${newRole}!`);
+      fetchUsersDirectory();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to update user role.');
+    } finally {
+      setTimeout(() => setSuccessToast(''), 4000);
+    }
+  };
+
+  // Synchronized PATCH endpoint directly to /team/role/:id
   const handlePromoteRole = async (e) => {
     e.preventDefault();
     if (!roleSearchRoll.trim()) return;
 
     const cleaned = roleSearchRoll.trim().toUpperCase();
+    const targetId = editingUserId || cleaned;
+
+    // Resolve avatar payload:
+    // If explicitly removed -> send empty string "" to overwrite in MongoDB
+    // If new base64 -> send memberPhotoBase64
+    // If left untouched -> send undefined so backend preserves existing
+    let photoPayload = undefined;
+    if (isPhotoExplicitlyDeleted) {
+      photoPayload = '';
+    } else if (memberPhotoBase64) {
+      photoPayload = memberPhotoBase64;
+    }
 
     try {
-      await api.patch('/auth/role', {
+      await api.patch(`/team/role/${targetId}`, {
         rollNumber: cleaned,
         role: selectedNewRole,
-        avatar: memberPhotoUrl.trim() || undefined,
-        photoUrl: memberPhotoUrl.trim() || undefined,
         designation: memberDesignation.trim() || undefined,
+        photoUrl: photoPayload,
+        avatar: photoPayload,
         linkedin: memberLinkedin.trim() || undefined,
       });
 
-      setSuccessToast(`✓ Role and profile details for ${cleaned} updated successfully.`);
-      setRoleSearchRoll('');
-      setMemberPhotoUrl('');
-      setMemberDesignation('');
-      setMemberLinkedin('');
+      setSuccessToast(`✓ Profile details for ${cleaned} updated successfully.`);
+      handleClearEditMode();
       fetchUsersDirectory();
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to update user profile. Verify student exists.');
@@ -321,13 +437,30 @@ export default function AdminPanel() {
   };
 
   const handleSelectMemberForEdit = (m) => {
+    setEditingUserId(m._id || null);
     setRoleSearchRoll(m.rollNumber || '');
     setSelectedNewRole(m.role || 'volunteer');
-    setMemberPhotoUrl(m.avatar || m.photoUrl || '');
+    setMemberPhotoBase64(m.avatar || m.photoUrl || '');
+    setIsPhotoExplicitlyDeleted(false);
     setMemberDesignation(m.designation || '');
     setMemberLinkedin(m.linkedin || '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
     window.scrollTo({ top: 300, behavior: 'smooth' });
   };
+
+  const filteredUsersList = useMemo(() => {
+    return usersList.filter((u) => {
+      const name = u.name?.toLowerCase() || '';
+      const roll = u.rollNumber?.toLowerCase() || '';
+      const role = u.role?.toLowerCase() || '';
+      const query = userDirectorySearch.toLowerCase();
+
+      const matchesSearch = name.includes(query) || roll.includes(query);
+      const matchesRole = userRoleFilter === 'All' || role === userRoleFilter.toLowerCase();
+
+      return matchesSearch && matchesRole;
+    });
+  }, [usersList, userDirectorySearch, userRoleFilter]);
 
   const totalRegisteredCount = rosterSummary.totalRegistered || 0;
   const attendedCount = rosterSummary.totalAttended || 0;
@@ -337,7 +470,6 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-[#FFF7ED]/30 dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] pb-20 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        
         {/* Error Notification */}
         {errorMessage && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-red-700 text-xs font-semibold">
@@ -345,7 +477,9 @@ export default function AdminPanel() {
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
-            <button onClick={() => setErrorMessage('')} className="font-bold text-xs">✕</button>
+            <button onClick={() => setErrorMessage('')} className="font-bold text-xs cursor-pointer">
+              ✕
+            </button>
           </div>
         )}
 
@@ -358,50 +492,50 @@ export default function AdminPanel() {
             </div>
             <button
               onClick={() => setSuccessToast('')}
-              className="text-[#4B5563] hover:text-[#111827] text-xs font-bold"
+              className="text-[#4B5563] hover:text-[#111827] text-xs font-bold cursor-pointer"
             >
               ✕
             </button>
           </div>
         )}
 
-        {/* 1. HEADER */}
-        <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#FFF7ED] text-primary border border-primary/20">
-                <Shield className="w-3.5 h-3.5" />
-                {roleBadgeText}
-              </span>
-              <span className="text-xs text-[#4B5563] dark:text-gray-400">
-                Admin Console: <strong className="text-[#111827] dark:text-white">{user?.name || 'Authorized Member'}</strong>
-              </span>
+        {/* 1. INSTITUTIONAL EXECUTIVE HEADER */}
+        <div className="relative overflow-hidden rounded-3xl bg-white dark:bg-[#111827] border border-soft-peach dark:border-gray-800 p-8 sm:p-10 shadow-sm">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#E53E24]/10 text-[#E53E24] border border-[#E53E24]/20 uppercase tracking-wider">
+                  <Shield className="w-3.5 h-3.5" />
+                  {roleBadgeText}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                  GVPCE &bull; Department of IT
+                </span>
+              </div>
+
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
+                OpenForge Executive Console
+              </h1>
+
+              <p className="text-sm text-[#4B5563] dark:text-gray-400 max-w-2xl leading-relaxed">
+                Centralized platform governance for departmental workshops, technical symposiums, digital attendee validation, and society member registries.
+              </p>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white tracking-tight">
-              OpenForge Command Center
-            </h1>
-            <p className="text-xs sm:text-sm text-[#4B5563] dark:text-gray-300">
-              Manage campus events, oversee live attendee verification, and govern team profiles.
-            </p>
-          </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="px-3.5 py-2 rounded-xl bg-soft-peach/60 dark:bg-gray-800/80 border border-soft-peach dark:border-gray-700 text-xs font-medium text-[#4B5563] dark:text-gray-300 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>Console Active: <strong className="text-[#111827] dark:text-white">{user?.name || 'Administrator'}</strong></span>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleExportCSV}
-              className="px-4 py-2.5 rounded-xl border border-primary/30 text-primary hover:bg-[#FFF7ED] text-xs font-bold transition-all flex items-center gap-2 shadow-2xs cursor-pointer"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export Attendance CSV</span>
-            </button>
-
-            <button
-              onClick={handleOpenCreateModal}
-              className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create New Event</span>
-            </button>
+              <button
+                onClick={handleOpenCreateModal}
+                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Event</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -512,6 +646,9 @@ export default function AdminPanel() {
             >
               <UserCheck className="w-4 h-4 text-primary" />
               <span>Team Roster & Roles</span>
+              <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
+                {usersList.length}
+              </span>
               {activeTab === 'permissions' && (
                 <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary rounded-full" />
               )}
@@ -763,177 +900,320 @@ export default function AdminPanel() {
         {/* 6. TAB 3: TEAM ROSTER & ROLES (Admin Only) */}
         {activeTab === 'permissions' && isAdmin && (
           <div className="space-y-8">
-            <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm space-y-5">
-              <div>
-                <h2 className="text-lg font-extrabold text-[#111827] dark:text-white">
-                  Promote Member & Configure Team Profile
-                </h2>
-                <p className="text-xs text-[#4B5563] dark:text-gray-400">
-                  Update student roles, assign designations, and upload photo URLs to populate the live Team page.
-                </p>
+            {/* Top Form: Promote Roll or Edit Detailed Profile */}
+            <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">
+                    {editingUserId ? 'Edit Profile & Role Details' : 'Assign Team Role & Upload Profile Photo'}
+                  </h2>
+                  <p className="text-xs text-[#4B5563] dark:text-gray-400">
+                    Upload an avatar image to display on the Team page cards.
+                  </p>
+                </div>
+                {editingUserId && (
+                  <button
+                    type="button"
+                    onClick={handleClearEditMode}
+                    className="text-xs text-primary font-bold hover:underline cursor-pointer"
+                  >
+                    Clear Edit Mode
+                  </button>
+                )}
               </div>
 
-              <form onSubmit={handlePromoteRole} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
-                  <div className="sm:col-span-4 space-y-1 text-left">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                      Student Roll Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={roleSearchRoll}
-                      onChange={(e) => setRoleSearchRoll(e.target.value)}
-                      placeholder="e.g. 324103311051"
-                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs font-mono font-bold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                    />
-                    {liveParsedRoleSearch.isValid && (
-                      <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold pt-1">
-                        ✓ {liveParsedRoleSearch.branch} • {liveParsedRoleSearch.currentYear}
+              <form onSubmit={handlePromoteRole} className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                  {/* Photo Upload Area with Image Preview, Delete, and Download */}
+                  <div className="md:col-span-4 flex flex-col items-center justify-center p-5 border-2 border-dashed border-soft-peach dark:border-gray-700 rounded-3xl bg-[#FFF7ED]/20 dark:bg-gray-800/40 min-h-[170px]">
+                    {memberPhotoBase64 ? (
+                      <div className="relative group flex flex-col items-center gap-2">
+                        <img
+                          src={memberPhotoBase64}
+                          alt="Preview"
+                          className="w-28 h-28 rounded-2xl object-cover border-2 border-primary shadow-md"
+                        />
+
+                        {/* Control action buttons */}
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={handleDownloadPhoto}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white dark:bg-gray-800 border border-soft-peach dark:border-gray-700 hover:border-primary text-gray-700 dark:text-gray-200 flex items-center gap-1 cursor-pointer shadow-xs"
+                            title="Download Current Photo"
+                          >
+                            <Download className="w-3 h-3 text-primary" />
+                            <span>Download</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleRemovePhoto}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-100 flex items-center gap-1 cursor-pointer shadow-xs"
+                            title="Remove Photo from Profile"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center cursor-pointer text-center py-2"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold text-[#111827] dark:text-white">
+                          Click to Upload Member Photo
+                        </span>
+                        <span className="text-[10px] text-gray-400 mt-0.5">PNG, JPG, WebP up to 2MB</span>
                       </div>
                     )}
-                  </div>
-
-                  <div className="sm:col-span-4 space-y-1 text-left">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                      Assign Role / Tier *
-                    </label>
-                    <select
-                      value={selectedNewRole}
-                      onChange={(e) => setSelectedNewRole(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                    >
-                      <option value="student">Student (Standard Access)</option>
-                      <option value="volunteer">Volunteer (Scanner Access)</option>
-                      <option value="board">Board Member (Core Team)</option>
-                      <option value="admin">Super Admin</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-4 space-y-1 text-left">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                      Designation / Title (Optional)
-                    </label>
                     <input
-                      type="text"
-                      value={memberDesignation}
-                      onChange={(e) => setMemberDesignation(e.target.value)}
-                      placeholder="e.g. Lead Technical Architect"
-                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
-                  <div className="sm:col-span-6 space-y-1 text-left">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5 text-primary" />
-                      <span>Profile Photo URL (Optional)</span>
-                    </label>
-                    <input
-                      type="url"
-                      value={memberPhotoUrl}
-                      onChange={(e) => setMemberPhotoUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/... or Google Drive direct link"
-                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      className="hidden"
                     />
                   </div>
 
-                  <div className="sm:col-span-4 space-y-1 text-left">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
-                      <Globe className="w-3.5 h-3.5 text-accent" />
-                      <span>LinkedIn Profile URL (Optional)</span>
-                    </label>
-                    <input
-                      type="url"
-                      value={memberLinkedin}
-                      onChange={(e) => setMemberLinkedin(e.target.value)}
-                      placeholder="https://linkedin.com/in/username"
-                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
+                  {/* Form Details */}
+                  <div className="md:col-span-8 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 text-left">
+                        <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                          Student Roll Number *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={roleSearchRoll}
+                          onChange={(e) => setRoleSearchRoll(e.target.value)}
+                          placeholder="e.g. 324103311051"
+                          className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-mono font-bold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                        />
+                        {liveParsedRoleSearch.isValid && (
+                          <div className="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold pt-0.5">
+                            ✓ {liveParsedRoleSearch.branch} • {liveParsedRoleSearch.currentYear}
+                          </div>
+                        )}
+                      </div>
 
-                  <div className="sm:col-span-2">
+                      <div className="space-y-1 text-left">
+                        <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                          Assign Role / Tier *
+                        </label>
+                        <select
+                          value={selectedNewRole}
+                          onChange={(e) => setSelectedNewRole(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                        >
+                          <option value="student">Student (Standard Access)</option>
+                          <option value="volunteer">Volunteer (Scanner Access)</option>
+                          <option value="board">Board Member (Core Leadership)</option>
+                          <option value="admin">Super Admin</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1 text-left">
+                        <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                          Designation / Title (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={memberDesignation}
+                          onChange={(e) => setMemberDesignation(e.target.value)}
+                          placeholder="e.g. Lead Technical Architect"
+                          className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+
+                      <div className="space-y-1 text-left">
+                        <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-accent" />
+                          <span>LinkedIn URL (Optional)</span>
+                        </label>
+                        <input
+                          type="url"
+                          value={memberLinkedin}
+                          onChange={(e) => setMemberLinkedin(e.target.value)}
+                          placeholder="https://linkedin.com/in/username"
+                          className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
+
                     <button
                       type="submit"
-                      className="w-full py-2.5 px-4 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+                      className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
                     >
-                      Save Profile
+                      {editingUserId ? 'Save Profile Changes' : 'Save & Promote'}
                     </button>
                   </div>
                 </div>
               </form>
             </div>
 
-            {/* Current Team Members */}
+            {/* Bottom Table: Full Registered User Registry */}
             <div className="bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-extrabold text-base text-[#111827] dark:text-white">
-                  Active Team Members ({usersList.length})
-                </h3>
-                <span className="text-xs text-[#4B5563] dark:text-gray-400">
-                  Click 'Edit' to update a member's photo or role
-                </span>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+                <div>
+                  <h3 className="font-extrabold text-base text-[#111827] dark:text-white">
+                    Registered Members Directory ({filteredUsersList.length})
+                  </h3>
+                  <span className="text-xs text-[#4B5563] dark:text-gray-400">
+                    All registered campus accounts. Promote directly to Volunteer or Board.
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-[#4B5563] absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={userDirectorySearch}
+                      onChange={(e) => setUserDirectorySearch(e.target.value)}
+                      placeholder="Search member or roll..."
+                      className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => setUserRoleFilter(e.target.value)}
+                    className="px-3 py-1.5 text-xs rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-[#111827] dark:text-white font-semibold focus:outline-none focus:border-primary"
+                  >
+                    <option value="All">All Roles</option>
+                    <option value="student">Students</option>
+                    <option value="volunteer">Volunteers</option>
+                    <option value="board">Board Members</option>
+                    <option value="admin">Admins</option>
+                  </select>
+                </div>
               </div>
 
               <div className="overflow-x-auto rounded-2xl border border-soft-peach dark:border-gray-800">
                 {loadingUsers ? (
-                  <div className="py-8 text-center text-[#4B5563]">Loading directory...</div>
+                  <div className="py-8 text-center text-[#4B5563]">Loading directory from database...</div>
                 ) : (
                   <table className="w-full text-left text-xs">
                     <thead className="bg-[#FFF7ED]/70 dark:bg-gray-800 font-bold uppercase tracking-wider text-[#4B5563] dark:text-gray-300 border-b border-soft-peach dark:border-gray-800">
                       <tr>
-                        <th className="px-5 py-3.5">Member</th>
-                        <th className="px-5 py-3.5">Roll Number</th>
-                        <th className="px-5 py-3.5">Designation</th>
-                        <th className="px-5 py-3.5">Role</th>
-                        <th className="px-5 py-3.5 text-right">Actions</th>
+                        <th className="px-5 py-4">Member</th>
+                        <th className="px-5 py-4">Roll Number</th>
+                        <th className="px-5 py-4">Department</th>
+                        <th className="px-5 py-4">Current Role</th>
+                        <th className="px-5 py-4">Designation</th>
+                        <th className="px-5 py-4 text-right">Promote / Demote</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-soft-peach dark:divide-gray-800 text-[#111827] dark:text-gray-200">
-                      {usersList.map((u) => {
-                        const avatarSrc = u.avatar || u.photoUrl;
-                        return (
-                          <tr key={u._id || u.rollNumber} className="hover:bg-[#FFF7ED]/20 dark:hover:bg-gray-800/40 transition-colors">
-                            <td className="px-5 py-3.5 flex items-center gap-3">
-                              {avatarSrc ? (
-                                <img
-                                  src={avatarSrc}
-                                  alt={u.name}
-                                  className="w-8 h-8 rounded-full object-cover border border-primary/20 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                                  {u.name?.charAt(0) || 'U'}
+                      {filteredUsersList.length > 0 ? (
+                        filteredUsersList.map((u) => {
+                          const avatarSrc = u.avatar || u.photoUrl;
+                          const role = u.role || 'student';
+
+                          return (
+                            <tr key={u._id || u.rollNumber} className="hover:bg-[#FFF7ED]/20 dark:hover:bg-gray-800/40 transition-colors">
+                              <td className="px-5 py-4 flex items-center gap-3.5">
+                                {avatarSrc ? (
+                                  <img
+                                    src={avatarSrc}
+                                    alt={u.name}
+                                    className="w-12 h-12 rounded-2xl object-cover border border-primary/20 shrink-0 shadow-sm"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
+                                    {u.name?.charAt(0) || 'U'}
+                                  </div>
+                                )}
+                                <div>
+                                  <span className="font-bold text-sm block text-[#111827] dark:text-white">{u.name}</span>
+                                  <span className="text-[11px] text-[#4B5563] dark:text-gray-400">{u.email}</span>
                                 </div>
-                              )}
-                              <div>
-                                <span className="font-bold block">{u.name}</span>
-                                <span className="text-[10px] text-[#4B5563] dark:text-gray-400">{u.department || 'GVPCE'}</span>
-                              </div>
-                            </td>
-                            <td className="px-5 py-3.5 font-mono text-primary font-bold">
-                              {u.rollNumber || 'N/A'}
-                            </td>
-                            <td className="px-5 py-3.5 text-[#4B5563] dark:text-gray-300">
-                              {u.designation || '—'}
-                            </td>
-                            <td className="px-5 py-3.5">
-                              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#FFF7ED] text-primary border border-primary/20 capitalize">
-                                {u.role}
-                              </span>
-                            </td>
-                            <td className="px-5 py-3.5 text-right">
-                              <button
-                                onClick={() => handleSelectMemberForEdit(u)}
-                                className="text-xs font-semibold text-primary hover:underline cursor-pointer"
-                              >
-                                Edit Profile
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                              </td>
+
+                              <td className="px-5 py-4 font-mono text-primary font-bold">
+                                {u.rollNumber || 'N/A'}
+                              </td>
+
+                              <td className="px-5 py-4 text-[#4B5563] dark:text-gray-300">
+                                {u.department || 'Information Technology'}
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold capitalize border ${
+                                    role === 'admin'
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                      : role === 'board'
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : role === 'volunteer'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-gray-100 text-gray-700 border-gray-200'
+                                  }`}
+                                >
+                                  {role}
+                                </span>
+                              </td>
+
+                              <td className="px-5 py-4 text-[#4B5563] dark:text-gray-300">
+                                {u.designation || '—'}
+                              </td>
+
+                              <td className="px-5 py-4 text-right space-x-1.5">
+                                {role === 'student' && (
+                                  <button
+                                    onClick={() => handleQuickRoleChange(u, 'volunteer')}
+                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-[11px] font-bold transition-all cursor-pointer"
+                                    title="Grant Volunteer Scanner Access"
+                                  >
+                                    + Volunteer
+                                  </button>
+                                )}
+
+                                {role === 'volunteer' && (
+                                  <button
+                                    onClick={() => handleQuickRoleChange(u, 'board')}
+                                    className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-300 text-[11px] font-bold transition-all cursor-pointer"
+                                    title="Promote to Core Board"
+                                  >
+                                    + Board
+                                  </button>
+                                )}
+
+                                {role !== 'student' && role !== 'admin' && (
+                                  <button
+                                    onClick={() => handleQuickRoleChange(u, 'student')}
+                                    className="px-2 py-1 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-300 text-[11px] font-semibold transition-all cursor-pointer"
+                                    title="Demote back to standard student role"
+                                  >
+                                    Demote
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => handleSelectMemberForEdit(u)}
+                                  className="text-xs font-semibold text-primary hover:underline ml-2 cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-8 text-center text-[#4B5563] dark:text-gray-400">
+                            No registered members found matching criteria.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 )}

@@ -18,24 +18,24 @@ export default function AboutPage() {
       role: 'Founder, Open Forge Club',
       batch: 'Batch of 2022–2026',
       department: 'Department of Information Technology, GVPCE',
-      avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=600&q=80',
+      avatar: 'sahithi.jpg',
       badgeColor: 'bg-[#E53E24] text-white',
       borderColor: 'border-[#E53E24]/30',
       description:
         'Established Open Forge to create an open platform where GVPCE students build, deploy, and collaborate on real-world software solutions and campus initiatives.',
-      linkedin: 'https://linkedin.com',
+      linkedin: 'https://www.linkedin.com/in/sahithikumari/?isSelfProfile=false',
     },
     {
       name: 'Prasanthi Vegi',
       role: 'Founder, Algorythm Club',
       batch: 'Batch of 2022–2026',
       department: 'Department of Information Technology, GVPCE',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=600&q=80',
+      avatar: 'prasanthi.jpg',
       badgeColor: 'bg-[#F97316] text-white',
       borderColor: 'border-[#F97316]/30',
       description:
         'Established Algorythm to inspire a culture of competitive problem-solving, algorithms, and technical mastery among students across campus.',
-      linkedin: 'https://linkedin.com',
+      linkedin: 'https://www.linkedin.com/in/vegi-prasanthi-837525254/?isSelfProfile=false',
     },
   ];
 
