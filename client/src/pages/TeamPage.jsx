@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { GithubIcon, LinkedinIcon } from '../components/SocialIcons';
 import { getTeam } from '../api';
+import { ALUMNI_ROSTER_2025_2026 } from '../data/alumniData';
 
 export default function TeamPage() {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -26,7 +27,6 @@ export default function TeamPage() {
     if (rawVal && /^\d{4}-\d{2,4}$/.test(rawVal.trim())) {
       return rawVal.trim();
     }
-    // Fallback based on creation date or default current session
     return '2026-2027';
   };
 
@@ -37,29 +37,37 @@ export default function TeamPage() {
         const res = await getTeam();
         const payload = res.data?.data || [];
 
-        let list = [];
+        let dbList = [];
         if (Array.isArray(payload)) {
-          list = payload;
+          dbList = payload;
         } else {
-          list = [
+          dbList = [
             ...(payload.faculty || []).map((m) => ({ ...m, tier: 'faculty' })),
             ...(payload.board || []).map((m) => ({ ...m, tier: 'board' })),
             ...(payload.volunteers || []).map((m) => ({ ...m, tier: 'volunteer' })),
           ];
         }
 
-        setRawTeamList(list);
+        // Live DB records default to current tenure session if not set
+        const liveMembers = dbList.map((m) => ({
+          ...m,
+          academicYear: m.academicYear || '2026-2027',
+        }));
 
-        // Calculate all session years formatted as YYYY-YYYY
+        // Merge live members with static alumni roster
+        const mergedList = [...liveMembers, ...ALUMNI_ROSTER_2025_2026];
+        setRawTeamList(mergedList);
+
+        // Find available academic sessions
         const detectedTenures = Array.from(
           new Set(
-            list
+            mergedList
               .map((m) => m.academicYear || m.tenure)
               .filter((val) => val && /^\d{4}-\d{2,4}$/.test(val.trim()))
           )
         ).sort((a, b) => b.localeCompare(a));
 
-        if (detectedTenures.length > 0 && detectedTenures.includes('2026-2027')) {
+        if (detectedTenures.includes('2026-2027')) {
           setSelectedYear('2026-2027');
         } else if (detectedTenures.length > 0) {
           setSelectedYear(detectedTenures[0]);
@@ -68,7 +76,8 @@ export default function TeamPage() {
         }
       } catch (err) {
         console.error('Failed to load team roster from live database:', err);
-        setRawTeamList([]);
+        // Fallback to static alumni roster if DB call fails
+        setRawTeamList(ALUMNI_ROSTER_2025_2026);
       } finally {
         setLoading(false);
       }
@@ -76,7 +85,7 @@ export default function TeamPage() {
     fetchTeamRoster();
   }, []);
 
-  // Compute all available tenure sessions (guaranteeing 2026-2027 and 2025-2026)
+  // Compute all selectable tenure sessions
   const availableTenures = useMemo(() => {
     const years = Array.from(
       new Set(
@@ -380,7 +389,6 @@ export default function TeamPage() {
                             </p>
 
                             <div className="pt-1 flex items-center gap-1.5 flex-wrap">
-                              {/* Displays student study year (e.g. 3rd Year / 4th Year) */}
                               {member.year && (
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-orange-50 dark:bg-orange-950/30 text-[#F97316] border border-[#F97316]/20">
                                   <Calendar className="w-2.5 h-2.5" />
