@@ -21,7 +21,6 @@ export default function TeamPage() {
   const [selectedYear, setSelectedYear] = useState('2026-2027');
   const [loading, setLoading] = useState(true);
 
-  // Helper to extract tenure session only (e.g., '2026-2027'), avoiding study years like '3rd Year'
   const extractTenure = (member) => {
     const rawVal = member.academicYear || member.tenure;
     if (rawVal && /^\d{4}-\d{2,4}$/.test(rawVal.trim())) {
@@ -48,17 +47,26 @@ export default function TeamPage() {
           ];
         }
 
-        // Live DB records default to current tenure session if not set
-        const liveMembers = dbList.map((m) => ({
-          ...m,
-          academicYear: m.academicYear || '2026-2027',
-        }));
+        // Set of all alumni roll numbers to prevent them from leaking into the 2026-2027 DB board
+        const alumniRollSet = new Set(
+          ALUMNI_ROSTER_2025_2026.map((a) => (a.rollNumber || '').toLowerCase().trim())
+        );
 
-        // Merge live members with static alumni roster
-        const mergedList = [...liveMembers, ...ALUMNI_ROSTER_2025_2026];
+        // Filter out any DB records that belong to the alumni roster
+        const liveCurrentMembers = dbList
+          .filter((m) => {
+            const roll = (m.rollNumber || '').toLowerCase().trim();
+            return !alumniRollSet.has(roll);
+          })
+          .map((m) => ({
+            ...m,
+            academicYear: m.academicYear || '2026-2027',
+          }));
+
+        // Merge clean current working members with the 2025-2026 alumni roster
+        const mergedList = [...liveCurrentMembers, ...ALUMNI_ROSTER_2025_2026];
         setRawTeamList(mergedList);
 
-        // Find available academic sessions
         const detectedTenures = Array.from(
           new Set(
             mergedList
@@ -76,7 +84,6 @@ export default function TeamPage() {
         }
       } catch (err) {
         console.error('Failed to load team roster from live database:', err);
-        // Fallback to static alumni roster if DB call fails
         setRawTeamList(ALUMNI_ROSTER_2025_2026);
       } finally {
         setLoading(false);
@@ -85,7 +92,6 @@ export default function TeamPage() {
     fetchTeamRoster();
   }, []);
 
-  // Compute all selectable tenure sessions
   const availableTenures = useMemo(() => {
     const years = Array.from(
       new Set(
@@ -103,11 +109,10 @@ export default function TeamPage() {
   const isCurrentSession = selectedYear === '2026-2027';
   const isAlumniSession = selectedYear === '2025-2026';
 
-  // Filter roster for the selected academic session
   const currentTenureMembers = useMemo(() => {
     return rawTeamList.filter((m) => {
       const memberTier = m.tier || m.role;
-      // Faculty members guide across multiple sessions unless explicitly bound to one
+      // Faculty stays visible across all batches unless assigned to a specific tenure
       if (memberTier === 'faculty') {
         const facTenure = m.academicYear || m.tenure;
         return !facTenure || facTenure === selectedYear || facTenure === 'All';

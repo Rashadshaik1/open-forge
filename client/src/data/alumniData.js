@@ -1,6 +1,6 @@
 export const ALUMNI_ROSTER_2025_2026 = [
   {
-    _id: 'alumni-1',
+    _id: 'alumni-2025-01',
     name: 'Sahithi Kumari Burada',
     tier: 'board',
     role: 'board',
@@ -11,10 +11,10 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311004',
     avatar: 'sahithi.jpg',
     linkedin: 'https://www.linkedin.com/in/sahithikumari/?isSelfProfile=false',
-    github: ' ',
+    github: '',
   },
   {
-    _id: 'alumni-2',
+    _id: 'alumni-2025-02',
     name: 'Deepika Kolli',
     tier: 'board',
     role: 'board',
@@ -24,11 +24,11 @@ export const ALUMNI_ROSTER_2025_2026 = [
     academicYear: '2025-2026',
     rollNumber: '322103311025',
     avatar: '',
-    linkedin: 'linkedin.com',
-    github: ' ',
+    linkedin: 'https://linkedin.com',
+    github: '',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-03',
     name: 'Abhiram Paka',
     tier: 'board',
     role: 'board',
@@ -42,7 +42,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-04',
     name: 'G Bala Sairam',
     tier: 'board',
     role: 'board',
@@ -56,7 +56,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-05',
     name: 'Murali Paila',
     tier: 'board',
     role: 'board',
@@ -70,7 +70,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-06',
     name: 'Vennela Doni',
     tier: 'board',
     role: 'board',
@@ -84,7 +84,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-07',
     name: 'Divya Simhadri',
     tier: 'board',
     role: 'board',
@@ -98,7 +98,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-08',
     name: 'Y Sri Snigdha',
     tier: 'board',
     role: 'board',
@@ -112,7 +112,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-09',
     name: 'B Rohitha',
     tier: 'board',
     role: 'board',
@@ -126,7 +126,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     github: 'https://github.com',
   },
   {
-    _id: 'alumni-3',
+    _id: 'alumni-2025-10',
     name: 'M Vasantha Rajya Lakshmi',
     tier: 'board',
     role: 'board',
