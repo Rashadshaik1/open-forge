@@ -43,15 +43,23 @@ export const toggleUpvote = (postId) => api.post(`/posts/${postId}/upvote`);
 export const addComment = (postId, content) =>
   api.post(`/posts/${postId}/comment`, { content });
 
-// Feedback & Team
+// Feedback
 export const submitFeedback = (eventId, data) => api.post(`/feedback/${eventId}`, data);
 export const getEventFeedback = (eventId) => api.get(`/feedback/${eventId}`);
 
 // Gallery
 export const getGallery = (params) => api.get('/gallery', { params });
 
+// Team & Roster (Public + Admin Management)
 export const getTeam = () => api.get('/team');
 export const addTeamMember = (data) => api.post('/team', data);
 export const deleteTeamMember = (id) => api.delete(`/team/${id}`);
+
+// Admin Panel Roster & Role Update Endpoints
+export const getAllTeamMembers = () => api.get('/team/all-members');
+export const updateMemberRole = (rollNumber, payload) =>
+  api.put(`/team/role/${rollNumber}`, payload);
+export const updateMemberAvatar = (rollNumber, payload) =>
+  api.patch(`/team/avatar/${rollNumber}`, payload);
 
 export default api;

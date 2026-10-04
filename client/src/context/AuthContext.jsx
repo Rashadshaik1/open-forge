@@ -5,12 +5,12 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [token, setToken] = useState(() => localStorage.getItem('token') || localStorage.getItem('openforge_token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const storedToken = localStorage.getItem('token');
+      const storedToken = localStorage.getItem('token') || localStorage.getItem('openforge_token');
       const storedUser = localStorage.getItem('user');
 
       if (storedToken && storedUser) {
@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
           console.error('Failed to parse stored user data', e);
           localStorage.removeItem('user');
           localStorage.removeItem('token');
+          localStorage.removeItem('openforge_token');
         }
       }
       setLoading(false);
@@ -38,7 +39,6 @@ export const AuthProvider = ({ children }) => {
 
       const response = await api.post('/auth/login', payload);
 
-      // Support backend data structure where token and user fields are in response.data.data
       const authData = response.data?.data || response.data;
       const receivedToken = authData?.token;
       const receivedUser = authData?.user || authData;
@@ -50,7 +50,9 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
+      // Save under both keys to ensure full backwards & cross-file compatibility
       localStorage.setItem('token', receivedToken);
+      localStorage.setItem('openforge_token', receivedToken);
       localStorage.setItem('user', JSON.stringify(receivedUser));
 
       setToken(receivedToken);
@@ -76,6 +78,7 @@ export const AuthProvider = ({ children }) => {
 
       if (receivedToken && receivedUser) {
         localStorage.setItem('token', receivedToken);
+        localStorage.setItem('openforge_token', receivedToken);
         localStorage.setItem('user', JSON.stringify(receivedUser));
         setToken(receivedToken);
         setUser(receivedUser);
@@ -93,6 +96,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('openforge_token');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);

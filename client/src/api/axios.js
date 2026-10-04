@@ -7,12 +7,37 @@ const api = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('openforge_token') || sessionStorage.getItem('openforge_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    // Check all potential token keys saved across login implementations
+    const token =
+      localStorage.getItem('openforge_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('jwt') ||
+      sessionStorage.getItem('openforge_token') ||
+      sessionStorage.getItem('token');
+
+    if (token) {
+      const cleanToken = token.replace(/^"(.*)"$/, '$1').trim();
+      config.headers.Authorization = cleanToken.startsWith('Bearer ')
+        ? cleanToken
+        : `Bearer ${cleanToken}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Optional: Automatically handle 401s if token expires
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.warn('[API 401 Unauthorized]: Token is missing, expired, or rejected.');
+    }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 export default api;

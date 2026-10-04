@@ -5,27 +5,38 @@ import User from '../models/User.js';
 export const protect = async (req, res, next) => {
   let token;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  if (authHeader && authHeader.startsWith('Bearer')) {
     try {
-      token = req.headers.authorization.split(' ')[1];
+      token = authHeader.split(' ')[1].trim();
+
       const decoded = jwt.verify(
         token,
         process.env.JWT_SECRET || 'openforge_jwt_fallback_secret'
       );
 
-      req.user = await User.findById(decoded.id).select('-password');
+      // Support common JWT ID property variations
+      const userId = decoded.id || decoded._id || decoded.userId;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid token structure: missing user identifier.',
+        });
+      }
+
+      req.user = await User.findById(userId).select('-password');
 
       if (!req.user) {
         return res.status(401).json({
           success: false,
-          message: 'User no longer exists or token is invalid.',
+          message: 'User no longer exists or session has expired.',
         });
       }
 
-      if (!req.user.isActive) {
+      // Check account activation (defaults to true if undefined)
+      if (req.user.isActive === false) {
         return res.status(403).json({
           success: false,
           message: 'Account is deactivated. Contact an admin.',
@@ -34,19 +45,18 @@ export const protect = async (req, res, next) => {
 
       return next();
     } catch (error) {
+      console.error('[AuthMiddleware] Token verification failed:', error.message);
       return res.status(401).json({
         success: false,
-        message: 'Not authorized, token verification failed.',
+        message: 'Not authorized: token verification failed or expired.',
       });
     }
   }
 
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied: No token provided.',
-    });
-  }
+  return res.status(401).json({
+    success: false,
+    message: 'Access denied: No Bearer token provided in headers.',
+  });
 };
 
 // Check if req.user role matches one of the allowed roles
@@ -55,7 +65,7 @@ export const authorize = (...roles) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        message: `Forbidden: role '${req.user?.role}' does not have sufficient permissions.`,
+        message: `Forbidden: role '${req.user?.role || 'unknown'}' does not have sufficient permissions.`,
       });
     }
     next();
