@@ -19,7 +19,7 @@ export default function LandingPage() {
   const [teamMembers, setTeamMembers] = useState({ faculty: [], board: [], volunteers: [] });
   const [loading, setLoading] = useState(true);
 
-  // 3D Perspective Tilt State
+  // 3D Perspective Tilt State (Zero zoom / pure rotation)
   const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0, isHovered: false, glareX: 50, glareY: 50 });
   const heroCardRef = useRef(null);
 
@@ -29,7 +29,6 @@ export default function LandingPage() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Calculate rotation (-12deg to +12deg for balanced 3D tilt)
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
     const rotateX = ((y - centerY) / centerY) * -10;
@@ -155,7 +154,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Side Visual: 3D Perspective Rotation & Zoom Canvas */}
+            {/* Right Side Visual: 3D Perspective Rotation ONLY (No Zoom) */}
             <div className="lg:col-span-6 relative flex items-center justify-center [perspective:1200px]">
               <div className="absolute -inset-4 sm:-inset-8 bg-gradient-to-tr from-[#E53E24]/25 via-[#F97316]/20 to-[#FFF7ED] dark:to-transparent rounded-full blur-3xl -z-10 animate-pulse" />
 
@@ -165,8 +164,8 @@ export default function LandingPage() {
                 onMouseLeave={handleMouseLeave}
                 style={{
                   transform: tilt.isHovered
-                    ? `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg) scale3d(1.04, 1.04, 1.04)`
-                    : 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)',
+                    ? `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`
+                    : 'perspective(1000px) rotateX(0deg) rotateY(0deg)',
                   transition: tilt.isHovered
                     ? 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)'
                     : 'transform 0.7s cubic-bezier(0.25, 1, 0.5, 1)',
@@ -181,7 +180,7 @@ export default function LandingPage() {
                       'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
                   }}
                   alt="OpenForge Official Full Team"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                  className="w-full h-full object-cover select-none"
                 />
 
                 {/* Glare Sheen Reflection Layer */}
@@ -193,11 +192,11 @@ export default function LandingPage() {
                   }}
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
                 <div
                   className="absolute bottom-4 inset-x-4 flex items-center justify-between text-white z-10"
-                  style={{ transform: 'translateZ(30px)' }}
+                  style={{ transform: 'translateZ(28px)' }}
                 >
                   <div>
                     <div className="text-xs font-bold uppercase tracking-wider text-[#F97316] flex items-center gap-1.5">
@@ -296,7 +295,7 @@ export default function LandingPage() {
                   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
               }}
               alt="OpenForge Entire Collective"
-              className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700 select-none"
+              className="w-full h-full object-cover select-none"
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
