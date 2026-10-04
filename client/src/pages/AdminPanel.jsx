@@ -520,54 +520,76 @@ export default function AdminPanel() {
   }, [usersList, userDirectorySearch, userRoleFilter]);
 
   // ----------------------------------------------------
-  // 5. GALLERY HIGHLIGHTS MANAGEMENT
+  // 5. MULTI-PHOTO GALLERY MANAGEMENT
   // ----------------------------------------------------
   const [galleryEventId, setGalleryEventId] = useState('');
-  const [galleryPhotoBase64, setGalleryPhotoBase64] = useState('');
+  const [stagedGalleryPhotos, setStagedGalleryPhotos] = useState([]); // Array of base64 strings
   const [galleryPhotoUrl, setGalleryPhotoUrl] = useState('');
   const [galleryCaption, setGalleryCaption] = useState('');
-  const [galleryPhotographer, setGalleryPhotographer] = useState('OpenForge Media Cell');
   const [submittingMedia, setSubmittingMedia] = useState(false);
 
-  const handleGalleryFileSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Read multiple files simultaneously
+  const handleGalleryFilesSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Gallery photo must be under 5MB.');
-      return;
-    }
+    files.forEach((file) => {
+      if (file.size > 8 * 1024 * 1024) {
+        alert(`"${file.name}" is over 8MB. Please choose a smaller photo.`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setStagedGalleryPhotos((prev) => [...prev, reader.result]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setGalleryPhotoBase64(reader.result);
-    };
-    reader.readAsDataURL(file);
+  const handleAddUrlImage = () => {
+    if (!galleryPhotoUrl.trim()) return;
+    setStagedGalleryPhotos((prev) => [...prev, galleryPhotoUrl.trim()]);
+    setGalleryPhotoUrl('');
+  };
+
+  const handleRemoveStagedPhoto = (index) => {
+    setStagedGalleryPhotos((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSaveGalleryMedia = async (e) => {
     e.preventDefault();
-    const finalImage = galleryPhotoBase64 || galleryPhotoUrl.trim();
-    if (!galleryEventId || !finalImage) {
-      alert('Please select an event and provide a photo.');
+    const allImagesToUpload = [...stagedGalleryPhotos];
+    if (galleryPhotoUrl.trim()) {
+      allImagesToUpload.push(galleryPhotoUrl.trim());
+    }
+
+    if (!galleryEventId) {
+      alert('Please select an event target.');
+      return;
+    }
+
+    if (allImagesToUpload.length === 0) {
+      alert('Please provide or upload at least one photograph.');
       return;
     }
 
     try {
       setSubmittingMedia(true);
-      await api.patch(`/events/${galleryEventId}`, {
-        bannerImage: finalImage,
-        description: galleryCaption.trim() || undefined,
+      
+      // POST to the dedicated multi-media gallery endpoint
+      await api.post(`/events/${galleryEventId}/gallery`, {
+        images: allImagesToUpload,
+        caption: galleryCaption.trim() || undefined,
       });
 
-      setSuccessToast('✓ Media record linked to event and published to Gallery!');
-      setGalleryPhotoBase64('');
+      setSuccessToast(`✓ Successfully added ${allImagesToUpload.length} photo(s) to event gallery!`);
+      setStagedGalleryPhotos([]);
       setGalleryPhotoUrl('');
       setGalleryCaption('');
       if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
       fetchLiveEvents();
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save media item.');
+      alert(err.response?.data?.message || 'Failed to save gallery photos.');
     } finally {
       setSubmittingMedia(false);
       setTimeout(() => setSuccessToast(''), 4000);
@@ -1044,7 +1066,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* 6. TAB 3: GALLERY & MEDIA HIGHLIGHTS */}
+        {/* 6. TAB 3: GALLERY & MULTI-MEDIA HIGHLIGHTS */}
         {activeTab === 'gallery' && (
           <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm space-y-6">
             <div>
@@ -1052,55 +1074,74 @@ export default function AdminPanel() {
                 Upload & Curate Gallery Media
               </h2>
               <p className="text-xs text-[#4B5563] dark:text-gray-400">
-                Link event photographs to the public moments archive. Supports both direct image file uploads and high-res image URLs.
+                Upload multiple photographs per event. Photos will be appended to the event gallery archive without replacing existing ones.
               </p>
             </div>
 
-            <form onSubmit={handleSaveGalleryMedia} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                <div className="md:col-span-5 flex flex-col items-center justify-center p-5 border-2 border-dashed border-soft-peach dark:border-gray-700 rounded-3xl bg-[#FFF7ED]/20 dark:bg-gray-800/40 min-h-[200px]">
-                  {galleryPhotoBase64 ? (
-                    <div className="relative group">
-                      <img
-                        src={galleryPhotoBase64}
-                        alt="Preview"
-                        className="w-48 h-36 rounded-2xl object-cover border-2 border-primary shadow-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGalleryPhotoBase64('');
-                          if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
-                        }}
-                        className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 cursor-pointer shadow-md"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+            <form onSubmit={handleSaveGalleryMedia} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                
+                {/* Image Picker & Staged Gallery Previews */}
+                <div className="md:col-span-6 space-y-3">
+                  <div
+                    onClick={() => galleryFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-soft-peach dark:border-gray-700 hover:border-primary/50 rounded-3xl bg-[#FFF7ED]/20 dark:bg-gray-800/40 p-6 flex flex-col items-center justify-center cursor-pointer transition-all"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+                      <Upload className="w-5 h-5" />
                     </div>
-                  ) : (
-                    <div
-                      onClick={() => galleryFileInputRef.current?.click()}
-                      className="flex flex-col items-center cursor-pointer text-center py-4"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
-                        <Upload className="w-5 h-5" />
-                      </div>
-                      <span className="text-xs font-bold text-[#111827] dark:text-white">
-                        Click to Upload Event Photograph
-                      </span>
-                      <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WebP up to 5MB</span>
-                    </div>
-                  )}
+                    <span className="text-xs font-bold text-[#111827] dark:text-white">
+                      Click to Select Photographs (Select Multiple)
+                    </span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WebP up to 8MB each</span>
+                  </div>
+
                   <input
                     ref={galleryFileInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handleGalleryFileSelect}
+                    multiple
+                    onChange={handleGalleryFilesSelect}
                     className="hidden"
                   />
+
+                  {/* Staged Image Thumbnails */}
+                  {stagedGalleryPhotos.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-[#111827] dark:text-white">
+                          Ready to Upload ({stagedGalleryPhotos.length} Photos)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setStagedGalleryPhotos([])}
+                          className="text-[11px] text-red-600 hover:underline font-semibold"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 max-h-56 overflow-y-auto p-1">
+                        {stagedGalleryPhotos.map((photoSrc, idx) => (
+                          <div key={idx} className="relative group rounded-xl overflow-hidden border border-primary/30 aspect-square bg-black/10">
+                            <img src={photoSrc} alt={`Staged ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStagedPhoto(idx)}
+                              className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-80 hover:opacity-100 transition-opacity"
+                              title="Remove photo"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="md:col-span-7 space-y-4">
+                {/* Event Target & Metadata Form */}
+                <div className="md:col-span-6 space-y-4">
                   <div className="space-y-1 text-left">
                     <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
                       Attach to Event *
@@ -1122,51 +1163,57 @@ export default function AdminPanel() {
 
                   <div className="space-y-1 text-left">
                     <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                      Or Image URL Link (Optional)
+                      Add Direct Image URL
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={galleryPhotoUrl}
+                        onChange={(e) => setGalleryPhotoUrl(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="flex-1 px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddUrlImage}
+                        className="px-3 py-2 bg-[#FFF7ED] text-primary border border-primary/20 rounded-xl text-xs font-bold hover:bg-primary hover:text-white transition-all cursor-pointer"
+                      >
+                        Add URL
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      Batch Caption / Moments Summary
                     </label>
                     <input
-                      type="url"
-                      value={galleryPhotoUrl}
-                      onChange={(e) => setGalleryPhotoUrl(e.target.value)}
-                      placeholder="https://images.unsplash.com/photo-..."
+                      type="text"
+                      value={galleryCaption}
+                      onChange={(e) => setGalleryCaption(e.target.value)}
+                      placeholder="e.g. Participants building models at Hackathon"
                       className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1 text-left">
-                      <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                        Photographer / Media Cell
-                      </label>
-                      <input
-                        type="text"
-                        value={galleryPhotographer}
-                        onChange={(e) => setGalleryPhotographer(e.target.value)}
-                        placeholder="e.g. OpenForge Media Cell"
-                        className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-left">
-                      <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                        Archive Caption
-                      </label>
-                      <input
-                        type="text"
-                        value={galleryCaption}
-                        onChange={(e) => setGalleryCaption(e.target.value)}
-                        placeholder="Short summary of moments captured"
-                        className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                      />
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
-                    disabled={submittingMedia}
-                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    disabled={submittingMedia || (!stagedGalleryPhotos.length && !galleryPhotoUrl.trim())}
+                    className="w-full py-3 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {submittingMedia ? 'Publishing Media...' : 'Publish to Gallery'}
+                    {submittingMedia ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Uploading Gallery Photos...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>
+                          Publish {stagedGalleryPhotos.length > 0 ? `${stagedGalleryPhotos.length} Photo(s)` : 'Media'} to Event Gallery
+                        </span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1492,7 +1539,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* CREATE / EDIT EVENT MODAL (With Drag and Drop Banner Upload) */}
+        {/* CREATE / EDIT EVENT MODAL */}
         {showEventModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
             <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-soft-peach dark:border-gray-800 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">

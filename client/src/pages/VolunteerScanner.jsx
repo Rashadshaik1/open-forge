@@ -120,7 +120,7 @@ export default function VolunteerScanner() {
           name: r.user?.name || r.studentName || 'Verified Student',
           rollNumber: r.user?.rollNumber || r.rollNumber || 'N/A',
           department: r.user?.department || r.department || 'Information Technology',
-          timestamp: new Date(r.updatedAt || r.createdAt).toLocaleTimeString([], {
+          timestamp: new Date(r.attendedAt || r.updatedAt || r.createdAt).toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
           }),
@@ -139,15 +139,15 @@ export default function VolunteerScanner() {
     }
   }, [selectedEventId, loadRosterData]);
 
-  // Helper to extract ticket code or roll number
+  // Robust extraction of ticket code or payload
   const extractTicketPayload = (rawInput) => {
     if (!rawInput) return '';
-    const trimmed = rawInput.trim();
+    const trimmed = String(rawInput).trim();
 
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
       try {
         const parsed = JSON.parse(trimmed);
-        return parsed.ticketCode || parsed.identifier || trimmed;
+        return parsed.ticketCode || parsed.identifier || parsed.code || trimmed;
       } catch (e) {
         return trimmed;
       }
@@ -165,10 +165,12 @@ export default function VolunteerScanner() {
         setIsVerifying(true);
         setAlertState(null);
 
+        // Send full verification payload so registrationController can match either code or roll
         const res = await api.post('/registrations/verify-ticket', {
           eventId: selectedEventId,
           ticketCode: cleanPayload,
           identifier: cleanPayload,
+          rollNumber: cleanPayload,
         });
 
         const reg = res.data?.data || res.data?.attendee || {};
@@ -234,10 +236,9 @@ export default function VolunteerScanner() {
       scanner.render(
         (decodedText) => {
           const now = Date.now();
-          // Debounce same QR scans within 4 seconds
           if (
             lastScannedRef.current.code === decodedText &&
-            now - lastScannedRef.current.time < 4000
+            now - lastScannedRef.current.time < 3500
           ) {
             return;
           }
@@ -276,6 +277,7 @@ export default function VolunteerScanner() {
   return (
     <div className="min-h-screen bg-[#FFF7ED]/30 dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] pb-20 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
         {/* 1. HEADER SECTION */}
         <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">

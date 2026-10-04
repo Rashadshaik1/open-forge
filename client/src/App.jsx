@@ -17,6 +17,7 @@ import TeamPage from './pages/TeamPage';
 import AboutPage from './pages/AboutPage';
 import CommunityPage from './pages/CommunityPage';
 import GalleryPage from './pages/GalleryPage';
+import EventGalleryPage from './pages/EventGalleryPage'; // Added import for Event Album page
 import PosterPage from './pages/PosterPage';
 import EventsPage from './pages/EventsPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -83,12 +84,12 @@ function AppContent() {
               <Route path="/about" element={<AboutPage />} />
               <Route path="/community" element={<CommunityPage />} />
               <Route path="/gallery" element={<GalleryPage />} />
+              <Route path="/gallery/:eventId" element={<EventGalleryPage />} />
               <Route path="/poster" element={<PosterPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/events" element={<EventsPage />} />
               <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-              
 
               {/* Student Portal (Any authenticated user) */}
               <Route

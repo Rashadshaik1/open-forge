@@ -36,7 +36,7 @@ export const downloadCertificate = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Event not found.' });
     }
 
-    // Verify verified door attendance
+    // Verify door attendance
     const registration = await Registration.findOne({
       event: eventId,
       user: user._id,
@@ -75,59 +75,96 @@ export const downloadCertificate = async (req, res) => {
         height: doc.page.height,
       });
     } else {
-      // Graceful fallback if background template isn't placed yet
+      // Fallback border & branding if template image is missing
       doc.rect(20, 20, doc.page.width - 40, doc.page.height - 40).lineWidth(3).strokeColor('#0f172a').stroke();
       doc.rect(26, 26, doc.page.width - 52, doc.page.height - 52).lineWidth(1).strokeColor('#0284c7').stroke();
 
-      doc.y = 70;
-      doc.font('Helvetica-Bold').fontSize(28).fillColor('#0f172a').text('OPEN FORGE', { align: 'center' });
-      doc.font('Helvetica').fontSize(11).fillColor('#64748b').text('DEPARTMENT OF INFORMATION TECHNOLOGY • GVPCE (A)', { align: 'center' });
+      doc.y = 60;
+      doc.font('Helvetica-Bold').fontSize(26).fillColor('#0f172a').text('GAYATRI VIDYA PARISHAD', { align: 'center' });
+      doc.font('Helvetica').fontSize(11).fillColor('#64748b').text('DEPARTMENT OF INFORMATION TECHNOLOGY • OPENFORGE', { align: 'center' });
       doc.moveDown(1);
-      doc.font('Helvetica-Bold').fontSize(16).fillColor('#0284c7').text('CERTIFICATE OF PARTICIPATION', { align: 'center' });
+      doc.font('Helvetica-Bold').fontSize(18).fillColor('#0284c7').text('CERTIFICATE OF PARTICIPATION', { align: 'center' });
     }
 
-    // --- Dynamic Text Overlay ---
-    // Start text placement in the open middle section of the template
-    doc.y = 210;
+    // --- Dynamic Text Overlay Centered Block ---
+    const contentWidth = 660;
+    const contentX = (doc.page.width - contentWidth) / 2;
 
-    doc.font('Helvetica').fontSize(13).fillColor('#475569').text('This is to certify that', { align: 'center' });
+    // 1. Introductory phrase (starts well below pre-printed "CERTIFICATE OF PARTICIPATION")
+    doc.y = 265;
+    doc.font('Helvetica').fontSize(11.5).fillColor('#475569').text('This is to certify that', contentX, doc.y, {
+      width: contentWidth,
+      align: 'center',
+    });
 
-    // Student Name (Prominent)
-    doc.moveDown(0.4);
-    doc.font('Helvetica-Bold').fontSize(26).fillColor('#0f172a').text(user.name, { align: 'center' });
-
-    // Roll number & Department
+    // 2. Student Name
     doc.moveDown(0.3);
-    doc.font('Helvetica').fontSize(13).fillColor('#334155').text(
-      `bearing Roll No. ${user.rollNumber} of ${user.department || 'Information Technology'}, ${user.year || 'GVPCE (A)'}`,
-      { align: 'center' }
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#0f172a').text(user.name, contentX, doc.y, {
+      width: contentWidth,
+      align: 'center',
+    });
+
+    // 3. Roll Number & Department
+    doc.moveDown(0.25);
+    const departmentStr = user.department || 'Information Technology';
+    const yearStr = user.year ? `, ${user.year}` : '';
+    doc.font('Helvetica').fontSize(11.5).fillColor('#334155').text(
+      `bearing Roll No. ${user.rollNumber} of ${departmentStr}${yearStr}`,
+      contentX,
+      doc.y,
+      {
+        width: contentWidth,
+        align: 'center',
+      }
     );
 
-    // Event participation sentence
-    doc.moveDown(0.8);
-    doc.font('Helvetica').fontSize(13).fillColor('#475569').text('has actively participated and demonstrated technical skills in the event', { align: 'center' });
-
-    // Event Title
+    // 4. Participation Statement
     doc.moveDown(0.4);
-    doc.font('Helvetica-Bold').fontSize(20).fillColor('#0369a1').text(`"${event.title}"`, { align: 'center' });
+    doc.font('Helvetica').fontSize(11.5).fillColor('#475569').text(
+      'has actively participated and demonstrated technical skills in the event',
+      contentX,
+      doc.y,
+      {
+        width: contentWidth,
+        align: 'center',
+      }
+    );
 
-    // Event Date & Venue
+    // 5. Event Title
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Bold').fontSize(18).fillColor('#E53E24').text(`"${event.title}"`, contentX, doc.y, {
+      width: contentWidth,
+      align: 'center',
+    });
+
+    // 6. Event Date & Venue (Finishes right around y = 415, safely above signatures)
     const formattedDate = new Date(event.eventDate).toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    doc.moveDown(0.4);
-    doc.font('Helvetica-Oblique').fontSize(11).fillColor('#64748b').text(
-      `Conducted on ${formattedDate} at ${event.venue}`,
-      { align: 'center' }
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Oblique').fontSize(10.5).fillColor('#64748b').text(
+      `Conducted on ${formattedDate} at ${event.venue || 'GVPCE Campus'}`,
+      contentX,
+      doc.y,
+      {
+        width: contentWidth,
+        align: 'center',
+      }
     );
 
-    // Verification ID (Bottom Center / Left)
-    doc.y = doc.page.height - 55;
-    doc.font('Courier').fontSize(9).fillColor('#94a3b8').text(
-      `Credential ID: ${registration.ticketCode}  |  Digitally Verified via Open Forge Portal`,
-      { align: 'center' }
+    // 7. Single-line Credential ID at the very bottom border
+    doc.y = doc.page.height - 24;
+    doc.font('Courier').fontSize(7.5).fillColor('#475569').text(
+      `Credential ID: ${registration.ticketCode}  •  Digitally Verified via OpenForge Portal`,
+      contentX,
+      doc.y,
+      {
+        width: contentWidth,
+        align: 'center',
+        lineBreak: false,
+      }
     );
 
     doc.end();

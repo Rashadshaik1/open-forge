@@ -14,8 +14,8 @@ const router = express.Router();
 router.post('/verify-ticket', protect, authorize('volunteer', 'board', 'admin'), verifyTicket);
 router.get('/my-tickets', protect, getMyTickets);
 
-// Event-specific attendance management routes (Board & Admin only)
-router.get('/event/:eventId/roster', protect, authorize('board', 'admin'), getEventRoster);
+// Event-specific attendance management routes (Volunteers, Board & Admin)
+router.get('/event/:eventId/roster', protect, authorize('volunteer', 'board', 'admin'), getEventRoster);
 router.get('/event/:eventId/export-csv', protect, authorize('board', 'admin'), exportAttendanceCSV);
 
 // Student registration

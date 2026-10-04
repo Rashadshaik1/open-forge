@@ -19,6 +19,8 @@ import {
   ArrowRight,
   ShieldAlert,
   Compass,
+  Download,
+  Award,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { parseGvpceRoll } from '../utils/parseRollNumber';
@@ -26,6 +28,7 @@ import {
   getEvents,
   getMyTickets,
   registerForEvent,
+  getCertificateDownloadUrl,
 } from '../api';
 
 export default function Dashboard() {
@@ -221,7 +224,6 @@ export default function Dashboard() {
 
           {/* Quick Actions */}
           <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
-            {/* ONLY visible to Super Admins */}
             {isSuperAdmin && (
               <Link
                 to="/admin"
@@ -290,6 +292,25 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Featured Certificate Download Action */}
+                {featuredPass.attended && (
+                  <div className="pt-2">
+                    <a
+                      href={getCertificateDownloadUrl(
+                        featuredPass.event?._id || featuredPass.event,
+                        studentRoll
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                    >
+                      <Award className="w-4 h-4" />
+                      <span>Download Official Certificate</span>
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
               </div>
 
               {/* Visual QR Pass Right */}
@@ -371,6 +392,8 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {registeredTickets.map((reg) => {
                   const ev = reg.event || {};
+                  const eventObjId = ev._id || reg.event;
+
                   return (
                     <div
                       key={reg._id}
@@ -432,6 +455,7 @@ export default function Dashboard() {
                         </div>
                       </div>
 
+                      {/* Card Footer: Pass Ref & Certificate Download */}
                       <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
                         <div className="text-[#4B5563] dark:text-gray-400">
                           Pass Ref:{' '}
@@ -439,9 +463,24 @@ export default function Dashboard() {
                             {reg.ticketCode}
                           </span>
                         </div>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          Scan at entrance
-                        </span>
+
+                        {reg.attended ? (
+                          <a
+                            href={getCertificateDownloadUrl(eventObjId, studentRoll)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                            title="Download Certificate of Attendance"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Certificate</span>
+                            <Download className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                            Scan at entrance
+                          </span>
+                        )}
                       </div>
                     </div>
                   );

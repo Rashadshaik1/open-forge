@@ -145,7 +145,6 @@ export default function TeamPage() {
                         key={id}
                         className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -239,7 +238,6 @@ export default function TeamPage() {
                         key={id}
                         className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -274,7 +272,6 @@ export default function TeamPage() {
                               {member.department || 'Information Technology'}
                             </p>
 
-                            {/* Study Year Pill */}
                             {member.year && (
                               <div className="pt-1">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] border border-[#E53E24]/20">
@@ -342,7 +339,7 @@ export default function TeamPage() {
                   </div>
 
                   <span className="text-xs font-bold text-purple-700 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 px-3 py-1 rounded-full">
-                    {volunteerList.length} Active Staff
+                    {volunteerList.length} Volunteers
                   </span>
                 </div>
 
@@ -356,7 +353,6 @@ export default function TeamPage() {
                         key={id}
                         className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-purple-50 to-stone-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -372,9 +368,10 @@ export default function TeamPage() {
 
                           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
+                          {/* Top badge updated to clean 'Volunteer' */}
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-purple-600 text-white">
-                              Scanner Crew
+                              Volunteer
                             </span>
                           </div>
                         </div>
@@ -384,14 +381,14 @@ export default function TeamPage() {
                             <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
                               {vol.name}
                             </h4>
+                            {/* Designation set cleanly to 'Volunteer' */}
                             <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 truncate">
-                              {vol.designation || 'Field Coordinator'}
+                              {vol.designation || 'Volunteer'}
                             </p>
                             <p className="text-[11px] text-[#4B5563] dark:text-gray-400 truncate">
                               {vol.department || 'Information Technology'}
                             </p>
 
-                            {/* Study Year Pill */}
                             {vol.year && (
                               <div className="pt-1">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">

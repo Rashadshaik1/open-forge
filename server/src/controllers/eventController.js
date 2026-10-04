@@ -105,7 +105,7 @@ export const createEvent = async (req, res) => {
 };
 
 // @desc    Update an event
-// @route   PUT /api/events/:id
+// @route   PUT /api/events/:id or PATCH /api/events/:id
 // @access  Private (Board & Admin only)
 export const updateEvent = async (req, res) => {
   try {
@@ -164,6 +164,91 @@ export const updateEvent = async (req, res) => {
   }
 };
 
+// @desc    Append media photos to an event's gallery array
+// @route   POST /api/events/:id/gallery
+// @access  Private (Board & Admin only)
+export const addGalleryMedia = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { url, caption, images } = req.body;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    // Handle single photo or array of photos
+    const newItems = [];
+    if (Array.isArray(images) && images.length > 0) {
+      images.forEach((img) => {
+        if (typeof img === 'string') newItems.push({ url: img, caption: caption || '' });
+        else if (img?.url) newItems.push({ url: img.url, caption: img.caption || caption || '' });
+      });
+    } else if (url) {
+      newItems.push({ url, caption: caption || '' });
+    }
+
+    if (newItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide at least one valid image URL or base64 string.',
+      });
+    }
+
+    // Push into galleryImages array without touching existing items
+    event.galleryImages.push(...newItems);
+
+    // If event does not yet have a primary banner, set the first gallery image as banner
+    if (!event.bannerImage && newItems.length > 0) {
+      event.bannerImage = newItems[0].url;
+    }
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: `${newItems.length} photo(s) added to gallery.`,
+      data: event,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload gallery media: ' + error.message,
+    });
+  }
+};
+
+// @desc    Remove a media photo from an event's gallery
+// @route   DELETE /api/events/:id/gallery/:mediaId
+// @access  Private (Board & Admin only)
+export const removeGalleryMedia = async (req, res) => {
+  try {
+    const { id, mediaId } = req.params;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Event not found' });
+    }
+
+    event.galleryImages = event.galleryImages.filter(
+      (img) => img._id.toString() !== mediaId && img.url !== mediaId
+    );
+
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Media removed from gallery.',
+      data: event,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete gallery media: ' + error.message,
+    });
+  }
+};
+
 // @desc    Delete an event
 // @route   DELETE /api/events/:id
 // @access  Private (Admin only)
@@ -203,7 +288,6 @@ export const toggleEventRegistration = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
-    // Toggle boolean or set explicitly if passed in body
     if (typeof req.body.isOpen === 'boolean') {
       event.isRegistrationOpen = req.body.isOpen;
     } else {
@@ -247,7 +331,6 @@ export const updateEventStatus = async (req, res) => {
 
     event.status = status;
 
-    // If event is marked completed or cancelled, auto-close registrations as well
     if (status === 'completed' || status === 'cancelled') {
       event.isRegistrationOpen = false;
     }

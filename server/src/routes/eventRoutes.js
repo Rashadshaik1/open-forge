@@ -7,6 +7,8 @@ import {
   deleteEvent,
   toggleEventRegistration,
   updateEventStatus,
+  addGalleryMedia,
+  removeGalleryMedia,
 } from '../controllers/eventController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -21,10 +23,15 @@ router
 router.patch('/:id/toggle-registration', protect, authorize('board', 'admin'), toggleEventRegistration);
 router.patch('/:id/status', protect, authorize('board', 'admin'), updateEventStatus);
 
+// Multi-media gallery routes (Board & Admin only)
+router.post('/:id/gallery', protect, authorize('board', 'admin'), addGalleryMedia);
+router.delete('/:id/gallery/:mediaId', protect, authorize('board', 'admin'), removeGalleryMedia);
+
 router
   .route('/:id')
   .get(getEventById)
   .put(protect, authorize('board', 'admin'), updateEvent)
+  .patch(protect, authorize('board', 'admin'), updateEvent)
   .delete(protect, authorize('admin'), deleteEvent);
 
 export default router;

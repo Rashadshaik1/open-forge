@@ -101,16 +101,31 @@ export const getMyTickets = async (req, res) => {
 // @access  Private (Volunteer, Board, Admin)
 export const verifyTicket = async (req, res) => {
   try {
-    const { ticketCode } = req.body;
+    let rawInput = req.body.ticketCode || req.body.identifier || req.body.code || req.body.data;
 
-    if (!ticketCode) {
+    if (!rawInput) {
       return res.status(400).json({
         success: false,
         message: 'Please scan or provide a valid ticket code',
       });
     }
 
-    const registration = await Registration.findOne({ ticketCode })
+    // Handle raw stringified JSON payloads from scanner
+    let resolvedTicketCode = rawInput;
+    if (typeof rawInput === 'string' && rawInput.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(rawInput);
+        resolvedTicketCode = parsed.ticketCode || parsed.code || rawInput;
+      } catch {
+        resolvedTicketCode = rawInput;
+      }
+    } else if (typeof rawInput === 'object') {
+      resolvedTicketCode = rawInput.ticketCode || rawInput.code || rawInput;
+    }
+
+    resolvedTicketCode = String(resolvedTicketCode).trim();
+
+    const registration = await Registration.findOne({ ticketCode: resolvedTicketCode })
       .populate('user', 'name rollNumber department year email')
       .populate('event', 'title venue eventDate');
 
@@ -126,7 +141,7 @@ export const verifyTicket = async (req, res) => {
       return res.status(400).json({
         success: false,
         valid: false,
-        message: `Ticket already used at ${registration.attendedAt.toLocaleTimeString()}`,
+        message: `Ticket already used at ${new Date(registration.attendedAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
         data: registration,
       });
     }
@@ -153,7 +168,7 @@ export const verifyTicket = async (req, res) => {
 
 // @desc    Get attendance roster for a specific event
 // @route   GET /api/registrations/event/:eventId/roster
-// @access  Private (Board & Admin only)
+// @access  Private (Volunteer, Board & Admin)
 export const getEventRoster = async (req, res) => {
   try {
     const { eventId } = req.params;
@@ -206,7 +221,6 @@ export const exportAttendanceCSV = async (req, res) => {
       });
     }
 
-    // Map clean table rows
     const rows = registrations.map((reg, index) => ({
       'S.No': index + 1,
       'Roll Number': reg.user?.rollNumber || 'N/A',

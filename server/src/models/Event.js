@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+const galleryImageSchema = new mongoose.Schema({
+  url: {
+    type: String,
+    required: true,
+  },
+  caption: {
+    type: String,
+    default: '',
+    trim: true,
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const eventSchema = new mongoose.Schema(
   {
     title: {
@@ -55,6 +71,8 @@ const eventSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    // Array to store multiple gallery photos per event
+    galleryImages: [galleryImageSchema],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -16,6 +16,12 @@ export const toggleEventRegistration = (id, isOpen) =>
 export const updateEventStatus = (id, status) =>
   api.patch(`/events/${id}/status`, { status });
 
+// Multi-media Gallery Endpoints
+export const addGalleryMedia = (eventId, payload) =>
+  api.post(`/events/${eventId}/gallery`, payload);
+export const removeGalleryMedia = (eventId, mediaId) =>
+  api.delete(`/events/${eventId}/gallery/${mediaId}`);
+
 // Registrations & Tickets
 export const registerForEvent = (eventId) => api.post(`/registrations/${eventId}`);
 export const getMyTickets = () => api.get('/registrations/my-tickets');
@@ -44,8 +50,8 @@ export const getEventFeedback = (eventId) => api.get(`/feedback/${eventId}`);
 // Gallery
 export const getGallery = (params) => api.get('/gallery', { params });
 
-export default api;
-
 export const getTeam = () => api.get('/team');
 export const addTeamMember = (data) => api.post('/team', data);
 export const deleteTeamMember = (id) => api.delete(`/team/${id}`);
+
+export default api;
