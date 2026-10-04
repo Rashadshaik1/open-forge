@@ -262,7 +262,7 @@ export default function LandingPage() {
         )}
       </section>
 
-      {/* 3. DEDICATED FULL TEAM BANNER (SOFT 40% GRADIENT HOVER TINT) */}
+      {/* 3. DEDICATED FULL TEAM BANNER (50% - 60% GRADIENT HOVER TINT) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-soft-peach dark:border-gray-800">
@@ -301,8 +301,8 @@ export default function LandingPage() {
             {/* Base Subtle Dark Vignette for Text Contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-            {/* Soft Primary Color Hover Shade (Capped at 40% height) */}
-            <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[#E53E24]/30 via-[#F97316]/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+            {/* Soft Primary Color Hover Shade: Extended to 55% from bottom */}
+            <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-[#E53E24]/28 via-[#F97316]/12 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
             <div className="absolute bottom-6 sm:bottom-8 left-6 sm:left-8 right-6 sm:right-8 flex flex-wrap items-end justify-between gap-4 text-white z-10">
               <div>
