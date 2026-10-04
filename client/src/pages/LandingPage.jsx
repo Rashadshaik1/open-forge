@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -18,6 +18,31 @@ export default function LandingPage() {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [teamMembers, setTeamMembers] = useState({ faculty: [], board: [], volunteers: [] });
   const [loading, setLoading] = useState(true);
+
+  // 3D Perspective Tilt State (Zero zoom / pure rotation)
+  const [tilt, setTilt] = useState({ rotateX: 0, rotateY: 0, isHovered: false, glareX: 50, glareY: 50 });
+  const heroCardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!heroCardRef.current) return;
+    const rect = heroCardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+
+    const glareX = (x / rect.width) * 100;
+    const glareY = (y / rect.height) * 100;
+
+    setTilt({ rotateX, rotateY, isHovered: true, glareX, glareY });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ rotateX: 0, rotateY: 0, isHovered: false, glareX: 50, glareY: 50 });
+  };
 
   useEffect(() => {
     const fetchLandingData = async () => {
@@ -119,7 +144,6 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4" />
                 </a>
 
-                {/* Redirects to Community Forum */}
                 <Link
                   to="/community"
                   className="rounded-full px-6 py-3 bg-white dark:bg-gray-800 border border-[#E53E24]/30 hover:border-[#E53E24] text-[#E53E24] dark:text-white font-semibold flex items-center gap-2 hover:bg-soft-peach/60 dark:hover:bg-gray-700 shadow-xs transition-all duration-200"
@@ -130,11 +154,25 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Right Side Visual: 16:9 Hero Frame */}
-            <div className="lg:col-span-6 relative flex items-center justify-center">
+            {/* Right Side Visual: 3D Perspective Rotation ONLY (No Zoom) */}
+            <div className="lg:col-span-6 relative flex items-center justify-center [perspective:1200px]">
               <div className="absolute -inset-4 sm:-inset-8 bg-gradient-to-tr from-[#E53E24]/25 via-[#F97316]/20 to-[#FFF7ED] dark:to-transparent rounded-full blur-3xl -z-10 animate-pulse" />
 
-              <div className="relative w-full aspect-video rounded-3xl overflow-hidden border-2 border-[#E53E24]/30 shadow-2xl group">
+              <div
+                ref={heroCardRef}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                style={{
+                  transform: tilt.isHovered
+                    ? `perspective(1000px) rotateX(${tilt.rotateX}deg) rotateY(${tilt.rotateY}deg)`
+                    : 'perspective(1000px) rotateX(0deg) rotateY(0deg)',
+                  transition: tilt.isHovered
+                    ? 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)'
+                    : 'transform 0.7s cubic-bezier(0.25, 1, 0.5, 1)',
+                  transformStyle: 'preserve-3d',
+                }}
+                className="relative w-full aspect-video rounded-3xl overflow-hidden border-2 border-[#E53E24]/40 shadow-2xl group cursor-pointer"
+              >
                 <img
                   src="/team-full.jpg"
                   onError={(e) => {
@@ -142,12 +180,24 @@ export default function LandingPage() {
                       'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
                   }}
                   alt="OpenForge Official Full Team"
-                  className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                  className="w-full h-full object-cover select-none"
+                />
+
+                {/* Glare Sheen Reflection Layer */}
+                <div
+                  className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+                  style={{
+                    opacity: tilt.isHovered ? 0.35 : 0,
+                    background: `radial-gradient(circle 320px at ${tilt.glareX}% ${tilt.glareY}%, rgba(255,255,255,0.7), transparent 70%)`,
+                  }}
                 />
 
                 <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent pointer-events-none" />
 
-                <div className="absolute bottom-4 inset-x-4 flex items-center justify-between text-white z-10">
+                <div
+                  className="absolute bottom-4 inset-x-4 flex items-center justify-between text-white z-10"
+                  style={{ transform: 'translateZ(28px)' }}
+                >
                   <div>
                     <div className="text-xs font-bold uppercase tracking-wider text-[#F97316] flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
@@ -160,7 +210,7 @@ export default function LandingPage() {
 
                   <Link
                     to="/team"
-                    className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/20 hover:bg-white text-white hover:text-[#111827] backdrop-blur-md border border-white/30 transition-all flex items-center gap-1 shrink-0"
+                    className="px-3.5 py-1.5 rounded-full text-xs font-bold bg-white/20 hover:bg-white text-white hover:text-[#111827] backdrop-blur-md border border-white/30 transition-all flex items-center gap-1 shrink-0 shadow-lg"
                   >
                     <span>View Roster</span>
                     <ArrowRight className="w-3 h-3" />
@@ -212,7 +262,7 @@ export default function LandingPage() {
         )}
       </section>
 
-      {/* 3. DEDICATED FULL TEAM BANNER (FLUSH 16:9 RATIO - NO BLACK BARS) */}
+      {/* 3. DEDICATED FULL TEAM BANNER */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-soft-peach dark:border-gray-800">
@@ -245,7 +295,7 @@ export default function LandingPage() {
                   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80';
               }}
               alt="OpenForge Entire Collective"
-              className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-700 select-none"
+              className="w-full h-full object-cover select-none"
             />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
