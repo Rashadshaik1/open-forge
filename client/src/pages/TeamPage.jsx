@@ -158,11 +158,8 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          {/* Base contrast shade */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
-
-                          {/* Primary Red/Crimson Card Color Gradient on Hover */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#E53E24]/80 via-[#E53E24]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Primary Red Gradient shade - 40% height from bottom */}
+                          <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[#E53E24]/75 via-[#E53E24]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-stone-900 text-white">
@@ -255,11 +252,8 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          {/* Base contrast shade */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
-
-                          {/* Orange Card Color Gradient on Hover */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-[#F97316]/80 via-[#F97316]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Orange Gradient shade - 40% height from bottom */}
+                          <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[#F97316]/75 via-[#F97316]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-orange-600 text-white">
@@ -374,11 +368,8 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          {/* Base contrast shade */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
-
-                          {/* Purple Card Color Gradient on Hover */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-purple-600/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Purple Gradient shade - 40% height from bottom */}
+                          <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-purple-900/75 via-purple-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-purple-600 text-white">
