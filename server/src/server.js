@@ -12,11 +12,45 @@ dotenv.config();
 
 const app = express();
 
-// 1. Core Middlewares (Declared BEFORE routes)
+// 1. CORS Configuration with protocol & slash normalization
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://open-forge-client.vercel.app',
+];
+
+if (process.env.CLIENT_URL) {
+  let envOrigin = process.env.CLIENT_URL.trim();
+  // Ensure protocol is present
+  if (!envOrigin.startsWith('http://') && !envOrigin.startsWith('https://')) {
+    envOrigin = `https://${envOrigin}`;
+  }
+  // Remove trailing slashes
+  envOrigin = envOrigin.replace(/\/+$/, '');
+  defaultAllowedOrigins.push(envOrigin);
+}
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., mobile apps, curl, server-to-server)
+      if (!origin) return callback(null, true);
+
+      const cleanOrigin = origin.replace(/\/+$/, '');
+      const isAllowed = defaultAllowedOrigins.some(
+        (allowed) => allowed.replace(/\/+$/, '') === cleanOrigin
+      );
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.warn(`[CORS Blocked]: Origin "${origin}" is not in allowed list:`, defaultAllowedOrigins);
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
