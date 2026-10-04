@@ -143,7 +143,7 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 hover:border-[#E53E24]/50 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
@@ -158,7 +158,11 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Base contrast shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
+
+                          {/* Primary Red/Crimson Card Color Gradient on Hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#E53E24]/80 via-[#E53E24]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-stone-900 text-white">
@@ -236,7 +240,7 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 hover:border-[#F97316]/50 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
@@ -251,7 +255,11 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Base contrast shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
+
+                          {/* Orange Card Color Gradient on Hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#F97316]/80 via-[#F97316]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-orange-600 text-white">
@@ -351,7 +359,7 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 hover:border-purple-400/50 shadow-xs hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-purple-50 to-stone-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
@@ -366,9 +374,12 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Base contrast shade */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none opacity-40 group-hover:opacity-0 transition-opacity duration-300" />
 
-                          {/* Top badge updated to clean 'Volunteer' */}
+                          {/* Purple Card Color Gradient on Hover */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/80 via-purple-600/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+
                           <div className="absolute top-3 left-3 z-10">
                             <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-purple-600 text-white">
                               Volunteer
@@ -381,7 +392,6 @@ export default function TeamPage() {
                             <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
                               {vol.name}
                             </h4>
-                            {/* Designation set cleanly to 'Volunteer' */}
                             <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 truncate">
                               {vol.designation || 'Volunteer'}
                             </p>
