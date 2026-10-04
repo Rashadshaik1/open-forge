@@ -39,7 +39,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '323103311L04',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-04',
@@ -53,7 +53,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311016',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-05',
@@ -67,7 +67,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311040',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-06',
@@ -79,9 +79,9 @@ export const ALUMNI_ROSTER_2025_2026 = [
     year: 'Batch of 2026',
     academicYear: '2025-2026',
     rollNumber: '322103311015',
-    avatar: '',
+    avatar: 'vennela.jpg',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-07',
@@ -95,7 +95,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311048',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-08',
@@ -109,7 +109,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311058',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-09',
@@ -123,7 +123,7 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311009',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
   {
     _id: 'alumni-2025-10',
@@ -137,6 +137,6 @@ export const ALUMNI_ROSTER_2025_2026 = [
     rollNumber: '322103311037',
     avatar: '',
     linkedin: 'https://linkedin.com',
-    github: 'https://github.com',
+    github: ' ',
   },
 ];
