@@ -262,7 +262,7 @@ export default function LandingPage() {
         )}
       </section>
 
-      {/* 3. DEDICATED FULL TEAM BANNER */}
+      {/* 3. DEDICATED FULL TEAM BANNER (WITH PRIMARY COLOR GRADIENT HOVER SHADE) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-2 border-b border-soft-peach dark:border-gray-800">
@@ -287,7 +287,7 @@ export default function LandingPage() {
             </Link>
           </div>
 
-          <div className="relative rounded-3xl overflow-hidden border-2 border-soft-peach dark:border-gray-800 shadow-xl aspect-video w-full group">
+          <div className="relative rounded-3xl overflow-hidden border-2 border-soft-peach dark:border-gray-800 hover:border-[#E53E24]/60 shadow-xl aspect-video w-full group cursor-pointer transition-colors duration-500">
             <img
               src="/team-full.jpg"
               onError={(e) => {
@@ -298,27 +298,32 @@ export default function LandingPage() {
               className="w-full h-full object-cover select-none"
             />
 
+            {/* Base Dark Vignette for Text Contrast */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+
+            {/* Hover Primary Color Gradient Shade */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#E53E24]/60 via-[#F97316]/35 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 mix-blend-multiply pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#E53E24]/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
             <div className="absolute bottom-6 sm:bottom-8 left-6 sm:left-8 right-6 sm:right-8 flex flex-wrap items-end justify-between gap-4 text-white z-10">
               <div>
-                <span className="text-xs font-bold uppercase tracking-wider text-[#F97316] flex items-center gap-1.5 mb-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#F97316] group-hover:text-amber-200 flex items-center gap-1.5 mb-1 transition-colors duration-300">
                   <Sparkles className="w-3.5 h-3.5" />
                   GVPCE IT Society
                 </span>
-                <h3 className="text-xl sm:text-3xl font-black">
+                <h3 className="text-xl sm:text-3xl font-black tracking-tight drop-shadow-md">
                   OpenForge Collective & Coordinators
                 </h3>
-                <p className="text-xs sm:text-sm text-gray-300 mt-1">
+                <p className="text-xs sm:text-sm text-gray-300 group-hover:text-white mt-1 transition-colors duration-300">
                   Batch of 2022–2026 &bull; Gayatri Vidya Parishad College of Engineering (Autonomous)
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold border border-white/30">
+                <span className="px-3.5 py-1.5 rounded-full bg-white/20 group-hover:bg-white/30 backdrop-blur-md text-xs font-bold border border-white/30 transition-all">
                   {teamMembers.board?.length || 0} Core Board
                 </span>
-                <span className="px-3.5 py-1.5 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold border border-white/30">
+                <span className="px-3.5 py-1.5 rounded-full bg-white/20 group-hover:bg-white/30 backdrop-blur-md text-xs font-bold border border-white/30 transition-all">
                   {teamMembers.volunteers?.length || 0} Volunteers
                 </span>
               </div>
