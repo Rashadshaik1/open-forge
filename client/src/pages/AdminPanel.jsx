@@ -19,6 +19,11 @@ import {
   Globe,
   X,
   Download,
+  Camera,
+  Radio,
+  Clock,
+  CheckCircle,
+  ImageIcon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { parseGvpceRoll } from '../utils/parseRollNumber';
@@ -35,12 +40,14 @@ import {
 export default function AdminPanel() {
   const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const galleryFileInputRef = useRef(null);
+  const bannerFileInputRef = useRef(null);
 
   const currentRole = user?.role || 'admin';
   const isAdmin = currentRole === 'admin';
   const roleBadgeText = isAdmin ? 'Executive Administrator' : 'Board Representative';
 
-  const [activeTab, setActiveTab] = useState('attendance');
+  const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' | 'events' | 'permissions' | 'gallery'
   const [successToast, setSuccessToast] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -72,6 +79,19 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchLiveEvents();
   }, [fetchLiveEvents]);
+
+  const getEventLifecycle = (evt) => {
+    if (evt.status === 'cancelled') return 'cancelled';
+    const now = new Date();
+    const start = new Date(evt.eventDate);
+    const end = evt.eventEndDate
+      ? new Date(evt.eventEndDate)
+      : new Date(start.getTime() + 3 * 60 * 60 * 1000);
+
+    if (now > end || evt.status === 'completed') return 'completed';
+    if (now >= start && now <= end) return 'ongoing';
+    return 'upcoming';
+  };
 
   // ----------------------------------------------------
   // 2. LIVE ATTENDANCE & ROSTER STATE
@@ -179,20 +199,61 @@ export default function AdminPanel() {
   };
 
   // ----------------------------------------------------
-  // 3. MANAGE EVENTS ACTIONS & MODAL
+  // 3. MANAGE EVENTS ACTIONS & DRAG-AND-DROP BANNER
   // ----------------------------------------------------
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEventId, setEditingEventId] = useState(null);
+  const [isDraggingBanner, setIsDraggingBanner] = useState(false);
   const [eventForm, setEventForm] = useState({
     title: '',
     category: 'Workshop',
     eventDate: '',
+    eventEndDate: '',
     registrationDeadline: '',
     venue: '',
     capacity: 100,
+    status: 'upcoming',
     bannerImage: '',
     description: '',
   });
+
+  const processBannerFile = (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload a valid image file (PNG, JPG, WebP).');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      alert('Event banner must be under 8MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setEventForm((prev) => ({ ...prev, bannerImage: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBanner(true);
+  };
+
+  const handleBannerDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBanner(false);
+  };
+
+  const handleBannerDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingBanner(false);
+    const file = e.dataTransfer.files?.[0];
+    processBannerFile(file);
+  };
 
   const handleOpenCreateModal = () => {
     setEditingEventId(null);
@@ -200,12 +261,15 @@ export default function AdminPanel() {
       title: '',
       category: 'Workshop',
       eventDate: '',
+      eventEndDate: '',
       registrationDeadline: '',
       venue: '',
       capacity: 100,
+      status: 'upcoming',
       bannerImage: '',
       description: '',
     });
+    if (bannerFileInputRef.current) bannerFileInputRef.current.value = '';
     setShowEventModal(true);
   };
 
@@ -215,12 +279,15 @@ export default function AdminPanel() {
       title: evt.title || '',
       category: evt.category || 'Workshop',
       eventDate: evt.eventDate ? evt.eventDate.slice(0, 16) : '',
+      eventEndDate: evt.eventEndDate ? evt.eventEndDate.slice(0, 16) : '',
       registrationDeadline: evt.registrationDeadline ? evt.registrationDeadline.slice(0, 16) : '',
       venue: evt.venue || '',
       capacity: evt.capacity || 100,
+      status: evt.status || 'upcoming',
       bannerImage: evt.bannerImage || '',
       description: evt.description || '',
     });
+    if (bannerFileInputRef.current) bannerFileInputRef.current.value = '';
     setShowEventModal(true);
   };
 
@@ -232,8 +299,10 @@ export default function AdminPanel() {
       const payload = {
         ...eventForm,
         eventDate: new Date(eventForm.eventDate).toISOString(),
+        eventEndDate: eventForm.eventEndDate ? new Date(eventForm.eventEndDate).toISOString() : null,
         registrationDeadline: new Date(eventForm.registrationDeadline || eventForm.eventDate).toISOString(),
         capacity: Number(eventForm.capacity),
+        status: eventForm.status,
       };
 
       if (editingEventId) {
@@ -278,7 +347,7 @@ export default function AdminPanel() {
   };
 
   // ----------------------------------------------------
-  // 4. USER ROLES & TEAM PROMOTION STATE (Admin Only)
+  // 4. USER ROLES & TEAM PROMOTION (Admin Only)
   // ----------------------------------------------------
   const [roleSearchRoll, setRoleSearchRoll] = useState('');
   const [selectedNewRole, setSelectedNewRole] = useState('volunteer');
@@ -305,7 +374,6 @@ export default function AdminPanel() {
       }
 
       const teamData = res.data?.data || res.data || [];
-
       let combined = [];
       if (Array.isArray(teamData)) {
         combined = teamData;
@@ -349,14 +417,12 @@ export default function AdminPanel() {
     reader.readAsDataURL(file);
   };
 
-  // Explicit photo removal
   const handleRemovePhoto = () => {
     setMemberPhotoBase64('');
     setIsPhotoExplicitlyDeleted(true);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Download currently loaded photo
   const handleDownloadPhoto = () => {
     if (!memberPhotoBase64) return;
     const link = document.createElement('a');
@@ -377,11 +443,9 @@ export default function AdminPanel() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Quick Inline Role Change from Directory Table
   const handleQuickRoleChange = async (targetUser, newRole) => {
     try {
       setSuccessToast(`Updating ${targetUser.name} to ${newRole}...`);
-
       const targetId = targetUser._id || targetUser.rollNumber;
       await api.patch(`/team/role/${targetId}`, {
         role: newRole,
@@ -397,7 +461,6 @@ export default function AdminPanel() {
     }
   };
 
-  // Synchronized PATCH endpoint directly to /team/role/:id
   const handlePromoteRole = async (e) => {
     e.preventDefault();
     if (!roleSearchRoll.trim()) return;
@@ -405,10 +468,6 @@ export default function AdminPanel() {
     const cleaned = roleSearchRoll.trim().toUpperCase();
     const targetId = editingUserId || cleaned;
 
-    // Resolve avatar payload:
-    // If explicitly removed -> send empty string "" to overwrite in MongoDB
-    // If new base64 -> send memberPhotoBase64
-    // If left untouched -> send undefined so backend preserves existing
     let photoPayload = undefined;
     if (isPhotoExplicitlyDeleted) {
       photoPayload = '';
@@ -455,12 +514,65 @@ export default function AdminPanel() {
       const role = u.role?.toLowerCase() || '';
       const query = userDirectorySearch.toLowerCase();
 
-      const matchesSearch = name.includes(query) || roll.includes(query);
-      const matchesRole = userRoleFilter === 'All' || role === userRoleFilter.toLowerCase();
-
-      return matchesSearch && matchesRole;
+      return (name.includes(query) || roll.includes(query)) &&
+        (userRoleFilter === 'All' || role === userRoleFilter.toLowerCase());
     });
   }, [usersList, userDirectorySearch, userRoleFilter]);
+
+  // ----------------------------------------------------
+  // 5. GALLERY HIGHLIGHTS MANAGEMENT
+  // ----------------------------------------------------
+  const [galleryEventId, setGalleryEventId] = useState('');
+  const [galleryPhotoBase64, setGalleryPhotoBase64] = useState('');
+  const [galleryPhotoUrl, setGalleryPhotoUrl] = useState('');
+  const [galleryCaption, setGalleryCaption] = useState('');
+  const [galleryPhotographer, setGalleryPhotographer] = useState('OpenForge Media Cell');
+  const [submittingMedia, setSubmittingMedia] = useState(false);
+
+  const handleGalleryFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Gallery photo must be under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setGalleryPhotoBase64(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveGalleryMedia = async (e) => {
+    e.preventDefault();
+    const finalImage = galleryPhotoBase64 || galleryPhotoUrl.trim();
+    if (!galleryEventId || !finalImage) {
+      alert('Please select an event and provide a photo.');
+      return;
+    }
+
+    try {
+      setSubmittingMedia(true);
+      await api.patch(`/events/${galleryEventId}`, {
+        bannerImage: finalImage,
+        description: galleryCaption.trim() || undefined,
+      });
+
+      setSuccessToast('✓ Media record linked to event and published to Gallery!');
+      setGalleryPhotoBase64('');
+      setGalleryPhotoUrl('');
+      setGalleryCaption('');
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+      fetchLiveEvents();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to save media item.');
+    } finally {
+      setSubmittingMedia(false);
+      setTimeout(() => setSuccessToast(''), 4000);
+    }
+  };
 
   const totalRegisteredCount = rosterSummary.totalRegistered || 0;
   const attendedCount = rosterSummary.totalAttended || 0;
@@ -470,6 +582,7 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-[#FFF7ED]/30 dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] pb-20 transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
         {/* Error Notification */}
         {errorMessage && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center justify-between text-red-700 text-xs font-semibold">
@@ -518,7 +631,7 @@ export default function AdminPanel() {
               </h1>
 
               <p className="text-sm text-[#4B5563] dark:text-gray-400 max-w-2xl leading-relaxed">
-                Centralized platform governance for departmental workshops, technical symposiums, digital attendee validation, and society member registries.
+                Centralized platform governance for departmental workshops, lifecycle control, digital attendee validation, and photo documentation archives.
               </p>
             </div>
 
@@ -599,8 +712,8 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* 3. TABS */}
-        <div className="border-b border-soft-peach dark:border-gray-800 flex items-center gap-8">
+        {/* 3. TABS NAVIGATION */}
+        <div className="border-b border-soft-peach dark:border-gray-800 flex flex-wrap items-center gap-6 sm:gap-8">
           <button
             onClick={() => setActiveTab('attendance')}
             className={`relative pb-3 text-sm font-bold transition-colors cursor-pointer ${
@@ -626,11 +739,26 @@ export default function AdminPanel() {
                 : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
             }`}
           >
-            <span>Manage Events</span>
+            <span>Events & Lifecycle</span>
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-accent/10 text-accent">
               {eventsList.length}
             </span>
             {activeTab === 'events' && (
+              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary rounded-full" />
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab('gallery')}
+            className={`relative pb-3 text-sm font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
+              activeTab === 'gallery'
+                ? 'text-primary'
+                : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
+            }`}
+          >
+            <Camera className="w-4 h-4 text-primary" />
+            <span>Gallery Media</span>
+            {activeTab === 'gallery' && (
               <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-primary rounded-full" />
             )}
           </button>
@@ -645,7 +773,7 @@ export default function AdminPanel() {
               }`}
             >
               <UserCheck className="w-4 h-4 text-primary" />
-              <span>Team Roster & Roles</span>
+              <span>Team Roles</span>
               <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700">
                 {usersList.length}
               </span>
@@ -806,9 +934,9 @@ export default function AdminPanel() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">Live Events Management</h2>
+                <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">Live Events & Lifecycle Control</h2>
                 <p className="text-xs text-[#4B5563] dark:text-gray-400">
-                  Publish new workshops, configure capacities, and control registration status in real time.
+                  Publish workshops, configure end times, set ongoing/completed statuses, and open or close registration gates[cite: 11].
                 </p>
               </div>
               <button
@@ -826,81 +954,229 @@ export default function AdminPanel() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {eventsList.map((evt) => (
-                  <div
-                    key={evt._id}
-                    className="bg-white dark:bg-[#111827] rounded-2xl p-6 border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#FFF7ED] text-accent border border-accent/20">
-                          {evt.category}
+                {eventsList.map((evt) => {
+                  const lifecycle = getEventLifecycle(evt);
+
+                  return (
+                    <div
+                      key={evt._id}
+                      className="bg-white dark:bg-[#111827] rounded-2xl p-6 border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          {lifecycle === 'ongoing' && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-500 text-white flex items-center gap-1 shadow-xs animate-pulse">
+                              <Radio className="w-3 h-3" />
+                              Live Now
+                            </span>
+                          )}
+                          {lifecycle === 'completed' && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-stone-800 text-stone-200 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-stone-400" />
+                              Completed
+                            </span>
+                          )}
+                          {lifecycle === 'upcoming' && (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              Upcoming
+                            </span>
+                          )}
+
+                          <button
+                            onClick={() => handleToggleEventRegistration(evt._id, evt.isRegistrationOpen)}
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
+                              evt.isRegistrationOpen
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-gray-100 text-gray-600 border-gray-200'
+                            }`}
+                            title="Click to toggle registration switch"
+                          >
+                            {evt.isRegistrationOpen ? 'Gate: Open' : 'Gate: Closed'}
+                          </button>
+                        </div>
+
+                        <h3 className="font-extrabold text-base text-[#111827] dark:text-white">{evt.title}</h3>
+                        <p className="text-xs text-[#4B5563] dark:text-gray-300 line-clamp-2 leading-relaxed">
+                          {evt.description}
+                        </p>
+
+                        <div className="space-y-1.5 text-xs text-[#4B5563] dark:text-gray-400 pt-1">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span>{new Date(evt.eventDate).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
+                            <span className="truncate">{evt.venue}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
+                        <span className="text-[#4B5563] dark:text-gray-400">
+                          <Users className="w-3.5 h-3.5 inline mr-1 text-primary" />
+                          {evt.registeredCount || 0} / {evt.capacity} Seats
                         </span>
 
-                        <button
-                          onClick={() => handleToggleEventRegistration(evt._id, evt.isRegistrationOpen)}
-                          className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
-                            evt.isRegistrationOpen
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-gray-100 text-gray-600 border-gray-200'
-                          }`}
-                          title="Click to toggle registration switch"
-                        >
-                          {evt.isRegistrationOpen ? 'Registration: Open' : 'Registration: Closed'}
-                        </button>
-                      </div>
-
-                      <h3 className="font-extrabold text-base text-[#111827] dark:text-white">{evt.title}</h3>
-                      <p className="text-xs text-[#4B5563] dark:text-gray-300 line-clamp-2 leading-relaxed">
-                        {evt.description}
-                      </p>
-
-                      <div className="space-y-1.5 text-xs text-[#4B5563] dark:text-gray-400 pt-1">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span>{new Date(evt.eventDate).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
-                          <span className="truncate">{evt.venue}</span>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleOpenEditModal(evt)}
+                            className="text-[#4B5563] hover:text-primary transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEvent(evt._id, evt.title)}
+                            className="text-[#4B5563] hover:text-red-600 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
                         </div>
                       </div>
                     </div>
-
-                    <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
-                      <span className="text-[#4B5563] dark:text-gray-400">
-                        <Users className="w-3.5 h-3.5 inline mr-1 text-primary" />
-                        {evt.registeredCount || 0} / {evt.capacity} Seats
-                      </span>
-
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => handleOpenEditModal(evt)}
-                          className="text-[#4B5563] hover:text-primary transition-colors flex items-center gap-1 font-semibold cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          onClick={() => handleDeleteEvent(evt._id, evt.title)}
-                          className="text-[#4B5563] hover:text-red-600 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
         )}
 
-        {/* 6. TAB 3: TEAM ROSTER & ROLES (Admin Only) */}
+        {/* 6. TAB 3: GALLERY & MEDIA HIGHLIGHTS */}
+        {activeTab === 'gallery' && (
+          <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm space-y-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-[#111827] dark:text-white">
+                Upload & Curate Gallery Media
+              </h2>
+              <p className="text-xs text-[#4B5563] dark:text-gray-400">
+                Link event photographs to the public moments archive. Supports both direct image file uploads and high-res image URLs.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveGalleryMedia} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                <div className="md:col-span-5 flex flex-col items-center justify-center p-5 border-2 border-dashed border-soft-peach dark:border-gray-700 rounded-3xl bg-[#FFF7ED]/20 dark:bg-gray-800/40 min-h-[200px]">
+                  {galleryPhotoBase64 ? (
+                    <div className="relative group">
+                      <img
+                        src={galleryPhotoBase64}
+                        alt="Preview"
+                        className="w-48 h-36 rounded-2xl object-cover border-2 border-primary shadow-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setGalleryPhotoBase64('');
+                          if (galleryFileInputRef.current) galleryFileInputRef.current.value = '';
+                        }}
+                        className="absolute -top-2 -right-2 p-1.5 bg-red-600 text-white rounded-full hover:bg-red-700 cursor-pointer shadow-md"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => galleryFileInputRef.current?.click()}
+                      className="flex flex-col items-center cursor-pointer text-center py-4"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-2">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold text-[#111827] dark:text-white">
+                        Click to Upload Event Photograph
+                      </span>
+                      <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WebP up to 5MB</span>
+                    </div>
+                  )}
+                  <input
+                    ref={galleryFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleGalleryFileSelect}
+                    className="hidden"
+                  />
+                </div>
+
+                <div className="md:col-span-7 space-y-4">
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      Attach to Event *
+                    </label>
+                    <select
+                      required
+                      value={galleryEventId}
+                      onChange={(e) => setGalleryEventId(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    >
+                      <option value="">Select Event from Catalogue</option>
+                      {eventsList.map((evt) => (
+                        <option key={evt._id} value={evt._id}>
+                          {evt.title} ({evt.category})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1 text-left">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      Or Image URL Link (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      value={galleryPhotoUrl}
+                      onChange={(e) => setGalleryPhotoUrl(e.target.value)}
+                      placeholder="https://images.unsplash.com/photo-..."
+                      className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1 text-left">
+                      <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                        Photographer / Media Cell
+                      </label>
+                      <input
+                        type="text"
+                        value={galleryPhotographer}
+                        onChange={(e) => setGalleryPhotographer(e.target.value)}
+                        placeholder="e.g. OpenForge Media Cell"
+                        className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-left">
+                      <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                        Archive Caption
+                      </label>
+                      <input
+                        type="text"
+                        value={galleryCaption}
+                        onChange={(e) => setGalleryCaption(e.target.value)}
+                        placeholder="Short summary of moments captured"
+                        className="w-full px-4 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingMedia}
+                    className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingMedia ? 'Publishing Media...' : 'Publish to Gallery'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* 7. TAB 4: TEAM ROSTER & ROLES */}
         {activeTab === 'permissions' && isAdmin && (
           <div className="space-y-8">
-            {/* Top Form: Promote Roll or Edit Detailed Profile */}
             <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -924,7 +1200,6 @@ export default function AdminPanel() {
 
               <form onSubmit={handlePromoteRole} className="space-y-5">
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-                  {/* Photo Upload Area with Image Preview, Delete, and Download */}
                   <div className="md:col-span-4 flex flex-col items-center justify-center p-5 border-2 border-dashed border-soft-peach dark:border-gray-700 rounded-3xl bg-[#FFF7ED]/20 dark:bg-gray-800/40 min-h-[170px]">
                     {memberPhotoBase64 ? (
                       <div className="relative group flex flex-col items-center gap-2">
@@ -933,8 +1208,6 @@ export default function AdminPanel() {
                           alt="Preview"
                           className="w-28 h-28 rounded-2xl object-cover border-2 border-primary shadow-md"
                         />
-
-                        {/* Control action buttons */}
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
@@ -945,7 +1218,6 @@ export default function AdminPanel() {
                             <Download className="w-3 h-3 text-primary" />
                             <span>Download</span>
                           </button>
-
                           <button
                             type="button"
                             onClick={handleRemovePhoto}
@@ -980,7 +1252,6 @@ export default function AdminPanel() {
                     />
                   </div>
 
-                  {/* Form Details */}
                   <div className="md:col-span-8 space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1 text-left">
@@ -1059,7 +1330,6 @@ export default function AdminPanel() {
               </form>
             </div>
 
-            {/* Bottom Table: Full Registered User Registry */}
             <div className="bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm p-6 space-y-4">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
                 <div>
@@ -1079,7 +1349,7 @@ export default function AdminPanel() {
                       value={userDirectorySearch}
                       onChange={(e) => setUserDirectorySearch(e.target.value)}
                       placeholder="Search member or roll..."
-                      className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                      className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-[#111827] dark:text-white focus:outline-none focus:border-primary"
                     />
                   </div>
 
@@ -1222,7 +1492,7 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* CREATE / EDIT EVENT MODAL */}
+        {/* CREATE / EDIT EVENT MODAL (With Drag and Drop Banner Upload) */}
         {showEventModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
             <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-soft-peach dark:border-gray-800 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
@@ -1275,6 +1545,24 @@ export default function AdminPanel() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      Lifecycle Status *
+                    </label>
+                    <select
+                      value={eventForm.status}
+                      onChange={(e) => setEventForm({ ...eventForm, status: e.target.value })}
+                      className="w-full px-3 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    >
+                      <option value="upcoming">Upcoming</option>
+                      <option value="ongoing">Live / Ongoing</option>
+                      <option value="completed">Completed / Past</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
                       Capacity *
                     </label>
                     <input
@@ -1283,21 +1571,6 @@ export default function AdminPanel() {
                       min={1}
                       value={eventForm.capacity}
                       onChange={(e) => setEventForm({ ...eventForm, capacity: e.target.value })}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-left">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                      Event Date & Time *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={eventForm.eventDate}
-                      onChange={(e) => setEventForm({ ...eventForm, eventDate: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
                     />
                   </div>
@@ -1315,16 +1588,98 @@ export default function AdminPanel() {
                   </div>
                 </div>
 
-                <div className="space-y-1 text-left">
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      Start Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      required
+                      value={eventForm.eventDate}
+                      onChange={(e) => setEventForm({ ...eventForm, eventDate: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
+                      End Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={eventForm.eventEndDate}
+                      onChange={(e) => setEventForm({ ...eventForm, eventEndDate: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* DRAG AND DROP BANNER UPLOAD */}
+                <div className="space-y-1.5 text-left">
                   <label className="text-xs font-bold text-[#111827] dark:text-gray-200 uppercase tracking-wider">
-                    Banner Image URL (Poster)
+                    Event Banner / Poster Image
                   </label>
+
+                  {eventForm.bannerImage ? (
+                    <div className="relative rounded-2xl overflow-hidden border border-soft-peach dark:border-gray-700 group">
+                      <img
+                        src={eventForm.bannerImage}
+                        alt="Event Banner Preview"
+                        className="w-full h-36 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => bannerFileInputRef.current?.click()}
+                          className="px-3 py-1.5 rounded-xl bg-white text-[#111827] text-xs font-bold flex items-center gap-1 shadow-md cursor-pointer hover:bg-gray-100"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-primary" />
+                          <span>Replace</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEventForm((prev) => ({ ...prev, bannerImage: '' }));
+                            if (bannerFileInputRef.current) bannerFileInputRef.current.value = '';
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-bold flex items-center gap-1 shadow-md cursor-pointer hover:bg-red-700"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={handleBannerDragOver}
+                      onDragLeave={handleBannerDragLeave}
+                      onDrop={handleBannerDrop}
+                      onClick={() => bannerFileInputRef.current?.click()}
+                      className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                        isDraggingBanner
+                          ? 'border-primary bg-primary/10 scale-[1.01]'
+                          : 'border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800/40 hover:border-primary/50'
+                      }`}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                        <Upload className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-bold text-[#111827] dark:text-white">
+                          Drag & drop poster image here, or <span className="text-primary underline">browse</span>
+                        </p>
+                        <p className="text-[10px] text-gray-400">PNG, JPG, or WebP up to 8MB</p>
+                      </div>
+                    </div>
+                  )}
+
                   <input
-                    type="url"
-                    value={eventForm.bannerImage}
-                    onChange={(e) => setEventForm({ ...eventForm, bannerImage: e.target.value })}
-                    placeholder="https://images.unsplash.com/photo-..."
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-soft-peach dark:border-gray-700 bg-[#FFF7ED]/30 dark:bg-gray-800 text-xs text-[#111827] dark:text-white focus:outline-none focus:border-primary"
+                    ref={bannerFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => processBannerFile(e.target.files?.[0])}
+                    className="hidden"
                   />
                 </div>
 

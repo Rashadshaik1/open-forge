@@ -1,8 +1,8 @@
-import { Calendar, MapPin, Users, ArrowRight, Tag, Check, Clock, AlertCircle } from 'lucide-react';
+import { Calendar, MapPin, Users, ArrowRight, Tag, Check, Clock, AlertCircle, Radio, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function EventCard({ event, onRegister, isUserRegistered = false }) {
+export default function EventCard({ event, onRegister, isUserRegistered = false, effectiveStatus }) {
   const { user } = useAuth();
 
   if (!event) return null;
@@ -13,21 +13,43 @@ export default function EventCard({ event, onRegister, isUserRegistered = false 
   const spotsLeft = Math.max(0, totalCapacity - registered);
   const percentFilled = Math.min(100, Math.round((registered / totalCapacity) * 100));
 
+  // Determine Lifecycle Status (upcoming, ongoing, completed, cancelled)
+  const now = new Date();
+  const eventDateObj = event.eventDate ? new Date(event.eventDate) : null;
+  const eventEndDateObj = event.eventEndDate
+    ? new Date(event.eventEndDate)
+    : eventDateObj
+    ? new Date(eventDateObj.getTime() + 3 * 60 * 60 * 1000)
+    : null;
+
+  let computedStatus = effectiveStatus;
+  if (!computedStatus) {
+    if (event.status === 'cancelled') {
+      computedStatus = 'cancelled';
+    } else if (event.status === 'completed' || (eventEndDateObj && now > eventEndDateObj)) {
+      computedStatus = 'completed';
+    } else if (eventDateObj && now >= eventDateObj && eventEndDateObj && now <= eventEndDateObj) {
+      computedStatus = 'ongoing';
+    } else {
+      computedStatus = 'upcoming';
+    }
+  }
+
+  const isOngoing = computedStatus === 'ongoing';
+  const isCompleted = computedStatus === 'completed';
+  const isCancelled = computedStatus === 'cancelled';
+
   // Dynamic Deadline & Capacity checks
   const isPastDeadline = Boolean(
-    event.registrationDeadline && new Date() > new Date(event.registrationDeadline)
-  );
-  const isPastEvent = Boolean(
-    event.eventDate && new Date() > new Date(event.eventDate)
+    event.registrationDeadline && now > new Date(event.registrationDeadline)
   );
   const isFull = registered >= totalCapacity;
   const isExplicitlyClosed = event.isRegistrationOpen === false;
-  const isCancelled = event.status === 'cancelled';
 
-  const isClosed = isCancelled || isPastEvent || isPastDeadline || isFull || isExplicitlyClosed;
+  // Closed for new registrations if ongoing, completed, deadline passed, full, or manually closed
+  const isClosed = isCancelled || isCompleted || isOngoing || isPastDeadline || isFull || isExplicitlyClosed;
 
   // Format Date and Time
-  const eventDateObj = event.eventDate ? new Date(event.eventDate) : null;
   const formattedDate = eventDateObj
     ? eventDateObj.toLocaleDateString('en-IN', {
         weekday: 'short',
@@ -45,94 +67,127 @@ export default function EventCard({ event, onRegister, isUserRegistered = false 
     : null;
 
   return (
-    <div className="group bg-white dark:bg-[#111827] rounded-2xl border border-soft-peach dark:border-gray-800 overflow-hidden shadow-xs hover:shadow-xl hover:border-accent/40 dark:hover:border-accent/40 transition-all duration-300 flex flex-col justify-between">
+    <div className={`group bg-white dark:bg-[#111827] rounded-3xl border ${
+      isOngoing
+        ? 'border-emerald-500/50 shadow-md shadow-emerald-500/10'
+        : 'border-soft-peach dark:border-gray-800'
+    } overflow-hidden shadow-xs hover:shadow-xl hover:border-[#E53E24]/40 transition-all duration-300 flex flex-col justify-between`}>
       <div>
         {/* Card Header Banner */}
-        <div className="relative h-44 bg-gradient-to-r from-primary to-accent overflow-hidden flex items-end p-4">
+        <div className="relative h-48 bg-gradient-to-r from-[#E53E24] to-[#F97316] overflow-hidden flex items-end p-4">
           {event.bannerImage ? (
             <img
               src={event.bannerImage}
               alt={event.title}
-              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className={`absolute inset-0 w-full h-full object-cover transition-transform duration-500 ${
+                isCompleted ? 'grayscale contrast-125 opacity-75' : 'group-hover:scale-105'
+              }`}
             />
           ) : (
-            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+            <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors" />
           )}
 
-          {/* Badges */}
-          <div className="absolute top-3 right-3 flex flex-wrap gap-1.5 z-10">
-            {event.isPopular && (
-              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/95 dark:bg-gray-800/95 text-primary shadow-xs backdrop-blur-xs">
-                Featured
+          {/* Top Left: Lifecycle Indicator Badge */}
+          <div className="absolute top-3.5 left-3.5 z-10 flex items-center gap-1.5">
+            {isOngoing && (
+              <span className="px-3 py-1 text-xs font-black rounded-full bg-emerald-500 text-white flex items-center gap-1.5 shadow-md uppercase tracking-wider animate-pulse">
+                <Radio className="w-3.5 h-3.5" />
+                <span>Live Now</span>
               </span>
             )}
+
+            {isCompleted && (
+              <span className="px-3 py-1 text-xs font-bold rounded-full bg-stone-900/90 text-stone-200 border border-stone-700/60 shadow-md backdrop-blur-xs flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-stone-400" />
+                <span>Completed</span>
+              </span>
+            )}
+
+            {!isOngoing && !isCompleted && !isCancelled && (
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-black/60 text-white backdrop-blur-xs flex items-center gap-1">
+                <Clock className="w-3 h-3 text-[#F97316]" />
+                <span>Upcoming</span>
+              </span>
+            )}
+          </div>
+
+          {/* Top Right: Category Tag */}
+          <div className="absolute top-3.5 right-3.5 z-10">
             {event.category && (
-              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white/95 dark:bg-gray-800/95 text-[#111827] dark:text-white flex items-center gap-1 shadow-xs backdrop-blur-xs">
-                <Tag className="w-3 h-3 text-accent" />
+              <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-white/95 dark:bg-gray-900/90 text-[#111827] dark:text-white flex items-center gap-1 shadow-xs backdrop-blur-xs">
+                <Tag className="w-3 h-3 text-[#E53E24]" />
                 {event.category}
               </span>
             )}
           </div>
 
+          {/* Bottom Banner Bar */}
           <div className="relative z-10 text-white">
-            <span className="text-xs font-semibold uppercase tracking-wider text-soft-peach bg-black/50 px-2.5 py-1 rounded-md backdrop-blur-xs">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-white bg-black/60 px-2.5 py-1 rounded-lg backdrop-blur-xs">
               {formattedDate}
             </span>
           </div>
         </div>
 
-        {/* Content */}
+        {/* Content Details */}
         <div className="p-5 space-y-3 text-left">
-          <h3 className="font-bold text-lg text-[#111827] dark:text-white group-hover:text-primary transition-colors line-clamp-1">
+          <h3 className="font-extrabold text-lg text-[#111827] dark:text-white group-hover:text-[#E53E24] transition-colors line-clamp-1">
             {event.title}
           </h3>
 
-          <p className="text-sm text-[#4B5563] dark:text-gray-300 line-clamp-2 leading-relaxed">
-            {event.description || 'Join us for this exciting student-driven campus event.'}
+          <p className="text-xs text-[#4B5563] dark:text-gray-300 line-clamp-2 leading-relaxed">
+            {event.description || 'Join us for this exciting campus technology event at GVPCE.'}
           </p>
 
           <div className="space-y-1.5 pt-1 text-xs text-[#4B5563] dark:text-gray-400">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-primary shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-[#E53E24] shrink-0" />
               <span>{formattedDate}</span>
             </div>
 
             {formattedTime && (
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-accent shrink-0" />
+                <Clock className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
                 <span>{formattedTime}</span>
               </div>
             )}
 
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-accent shrink-0" />
-              <span className="truncate">{event.venue || event.location || 'GVPCE Campus'}</span>
+              <MapPin className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
+              <span className="truncate">{event.venue || 'GVPCE Campus'}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Card Footer */}
-      <div className="p-5 pt-0 border-t border-soft-peach/60 dark:border-gray-800 space-y-3">
+      <div className="p-5 pt-0 border-t border-soft-peach dark:border-gray-800 space-y-3">
         {/* Attendees Meter */}
         <div className="pt-3">
           <div className="flex justify-between items-center text-xs text-[#4B5563] dark:text-gray-400 mb-1.5">
             <span className="flex items-center gap-1">
-              <Users className="w-3.5 h-3.5 text-primary" />
-              <span className="font-medium text-[#111827] dark:text-white">{registered}</span> / {totalCapacity} seats
+              <Users className="w-3.5 h-3.5 text-[#E53E24]" />
+              <span className="font-bold text-[#111827] dark:text-white">{registered}</span> / {totalCapacity} participants
             </span>
             <span>
               {isFull ? (
-                <span className="text-red-500 font-semibold">Housefull</span>
+                <span className="text-red-500 font-bold">Housefull</span>
+              ) : isCompleted ? (
+                <span className="text-gray-400 font-semibold">Ended</span>
               ) : (
                 `${spotsLeft} spots left`
               )}
             </span>
           </div>
+
           <div className="w-full bg-soft-peach dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isFull ? 'bg-red-500' : 'bg-gradient-to-r from-accent to-primary'
+                isCompleted
+                  ? 'bg-gray-400'
+                  : isFull
+                  ? 'bg-red-500'
+                  : 'bg-gradient-to-r from-[#F97316] to-[#E53E24]'
               }`}
               style={{ width: `${percentFilled}%` }}
             />
@@ -144,24 +199,38 @@ export default function EventCard({ event, onRegister, isUserRegistered = false 
           {isUserRegistered ? (
             <Link
               to="/dashboard"
-              className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 shadow-2xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center gap-1.5 shadow-2xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
             >
               <Check className="w-4 h-4" />
-              <span>Registered (View Pass)</span>
+              <span>Pass Confirmed (View Pass)</span>
+            </Link>
+          ) : isCompleted ? (
+            <button
+              disabled
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-500 flex items-center justify-center gap-1.5 cursor-not-allowed"
+            >
+              <CheckCircle2 className="w-4 h-4 text-gray-400" />
+              <span>Event Concluded</span>
+            </button>
+          ) : isOngoing ? (
+            <Link
+              to={user ? "/dashboard" : "/login"}
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 flex items-center justify-center gap-1.5 shadow-sm transition-all"
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse" />
+              <span>Live in Session • Join/Verify</span>
             </Link>
           ) : isClosed ? (
             <button
               disabled
-              className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 flex items-center justify-center gap-1.5 cursor-not-allowed"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center gap-1.5 cursor-not-allowed"
             >
               <AlertCircle className="w-4 h-4" />
               <span>
                 {isCancelled
                   ? 'Event Cancelled'
-                  : isPastEvent
-                  ? 'Event Concluded'
                   : isFull
-                  ? 'Capacity Full'
+                  ? 'Registrations Full'
                   : 'Registration Closed'}
               </span>
             </button>
@@ -169,7 +238,7 @@ export default function EventCard({ event, onRegister, isUserRegistered = false 
             <button
               type="button"
               onClick={() => onRegister(event)}
-              className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-white bg-primary hover:bg-primary-hover shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group/btn cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#E53E24] hover:bg-[#CB321A] shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group/btn cursor-pointer"
             >
               <span>RSVP / Join Event</span>
               <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
@@ -177,9 +246,9 @@ export default function EventCard({ event, onRegister, isUserRegistered = false 
           ) : (
             <Link
               to={user ? "/dashboard" : "/login"}
-              className="w-full py-2.5 px-4 rounded-xl text-xs sm:text-sm font-semibold text-white bg-primary hover:bg-primary-hover shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group/btn cursor-pointer"
+              className="w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white bg-[#E53E24] hover:bg-[#CB321A] shadow-xs hover:shadow transition-all flex items-center justify-center gap-2 group/btn cursor-pointer"
             >
-              <span>{user ? 'View & Register' : 'Sign in to Register'}</span>
+              <span>{user ? 'View & Register' : 'Sign In to Register'}</span>
               <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
             </Link>
           )}

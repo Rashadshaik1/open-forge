@@ -9,13 +9,12 @@ import {
   Maximize2,
   Calendar,
   MapPin,
-  Flame,
-  Award,
   Loader2,
   FolderOpen,
+  Image as ImageIcon,
+  Share2,
 } from 'lucide-react';
 import { getEvents } from '../api';
-import api from '../api/axios';
 
 export default function GalleryPage() {
   const [activeCategory, setActiveCategory] = useState('all');
@@ -25,20 +24,19 @@ export default function GalleryPage() {
   const [likes, setLikes] = useState({});
   const [userLiked, setUserLiked] = useState({});
 
-  // 1. Fetch live events from your actual MongoDB database
+  // 1. Fetch live event media
   const fetchLiveGallery = useCallback(async () => {
     try {
       setLoading(true);
       const res = await getEvents();
-      const events = res.data?.data || [];
+      const events = res.data?.data || res.data || [];
 
-      // Transform real MongoDB events into gallery photo cards
       const mappedItems = events.map((event) => ({
         _id: event._id,
         category: (event.category || 'Event').toLowerCase(),
         rawCategory: event.category || 'Campus Event',
         title: event.title,
-        caption: event.description || 'OpenForge campus technical event.',
+        caption: event.description || 'OpenForge campus technical symposium.',
         date: event.eventDate
           ? new Date(event.eventDate).toLocaleDateString('en-IN', {
               month: 'short',
@@ -56,15 +54,14 @@ export default function GalleryPage() {
 
       setGalleryItems(mappedItems);
 
-      // Load initial likes from localStorage or defaults
       const savedLikes = JSON.parse(localStorage.getItem('openforge_gallery_likes') || '{}');
       const initialLikes = {};
       mappedItems.forEach((item) => {
-        initialLikes[item._id] = savedLikes[item._id] ?? (item.registeredCount + 12);
+        initialLikes[item._id] = savedLikes[item._id] ?? (item.registeredCount + 8);
       });
       setLikes(initialLikes);
     } catch (err) {
-      console.error('Failed to load gallery events from backend:', err);
+      console.error('Failed to load gallery events:', err);
       setGalleryItems([]);
     } finally {
       setLoading(false);
@@ -75,7 +72,7 @@ export default function GalleryPage() {
     fetchLiveGallery();
   }, [fetchLiveGallery]);
 
-  // 2. Build Category Pills dynamically from actual database categories
+  // 2. Build Category Pills dynamically
   const categories = useMemo(() => {
     const uniqueCats = Array.from(
       new Set(galleryItems.map((item) => item.rawCategory).filter(Boolean))
@@ -86,10 +83,10 @@ export default function GalleryPage() {
       label: catName,
     }));
 
-    return [{ id: 'all', label: 'All Moments' }, ...dynamicPills];
+    return [{ id: 'all', label: 'All Highlights' }, ...dynamicPills];
   }, [galleryItems]);
 
-  // 3. Filter items for grid display
+  // 3. Filter items for display
   const filteredItems = useMemo(() => {
     if (activeCategory === 'all') return galleryItems;
     return galleryItems.filter((item) => item.category === activeCategory);
@@ -150,13 +147,13 @@ export default function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-[#FFF7ED]/30 dark:bg-[#0B0F17] text-[#111827] dark:text-[#F9FAFB] pb-24 transition-colors duration-200">
-      {/* 1. PAGE HEADER */}
+      {/* 1. HEADER BANNER */}
       <section className="relative overflow-hidden py-16 sm:py-20 border-b border-soft-peach dark:border-gray-800 bg-white dark:bg-[#111827]/80">
         <div className="absolute top-0 right-1/4 w-96 h-96 bg-gradient-to-tr from-[#E53E24]/10 via-[#F97316]/10 to-transparent rounded-full blur-3xl pointer-events-none -z-0" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold bg-[#E53E24]/10 text-[#E53E24] dark:bg-[#E53E24]/20 border border-[#E53E24]/30 uppercase tracking-wider">
             <Camera className="w-3.5 h-3.5 text-[#E53E24]" />
-            <span>Visual Archives &bull; Live Event Highlights</span>
+            <span>Campus Media Archives &bull; Department of IT</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#111827] dark:text-white">
@@ -164,22 +161,23 @@ export default function GalleryPage() {
           </h1>
 
           <p className="text-sm sm:text-base text-[#4B5563] dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
-            Live archives and visual highlights of campus hackathons, workshops, and student initiatives at GVPCE.
+            Curated visual documentation from departmental hackathons, workshops, guest lectures, and campus innovation initiatives at GVPCE.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-medium text-[#4B5563] dark:text-gray-400">
+          {/* Mature, clean metadata indicators */}
+          <div className="flex flex-wrap items-center justify-center gap-6 pt-2 text-xs font-medium text-[#4B5563] dark:text-gray-400">
             <span className="flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-[#E53E24]" />
-              <strong className="text-[#111827] dark:text-white font-bold">{galleryItems.length}</strong> Live Events
+              <strong className="text-[#111827] dark:text-white font-bold">{galleryItems.length}</strong> Event Highlights
             </span>
             <span className="hidden sm:inline text-gray-300 dark:text-gray-700">&bull;</span>
             <span className="flex items-center gap-1.5">
-              <Flame className="w-4 h-4 text-[#F97316]" />
-              <strong className="text-[#111827] dark:text-white font-bold">100%</strong> Live Database Records
+              <ImageIcon className="w-4 h-4 text-[#F97316]" />
+              <span>Official Media Coverage</span>
             </span>
           </div>
 
-          {/* Dynamic Filter Pills */}
+          {/* Dynamic Category Filter Pills */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-6">
             {categories.map((cat) => (
               <button
@@ -203,23 +201,23 @@ export default function GalleryPage() {
         <div className="flex items-center justify-between pb-6 border-b border-soft-peach dark:border-gray-800 mb-8">
           <div>
             <h2 className="text-xl sm:text-2xl font-black text-[#111827] dark:text-white">
-              {categories.find((c) => c.id === activeCategory)?.label || 'All Moments'}
+              {categories.find((c) => c.id === activeCategory)?.label || 'All Highlights'}
             </h2>
             <p className="text-xs text-[#4B5563] dark:text-gray-400 mt-0.5">
-              Showing {filteredItems.length} live records &bull; Click any card for full view
+              Displaying {filteredItems.length} documented moments &bull; Select any photo for high-resolution view
             </p>
           </div>
 
-          <span className="text-xs font-semibold text-[#E53E24] hidden sm:inline-flex items-center gap-1">
+          <span className="text-xs font-semibold text-[#E53E24] hidden sm:inline-flex items-center gap-1.5">
             <Maximize2 className="w-3.5 h-3.5" />
-            Fullscreen Lightbox Enabled
+            <span>Interactive Lightbox Enabled</span>
           </span>
         </div>
 
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-[#4B5563]">
             <Loader2 className="w-8 h-8 animate-spin text-[#E53E24] mb-3" />
-            <p className="text-sm font-semibold">Loading live event photos...</p>
+            <p className="text-sm font-semibold">Loading media gallery...</p>
           </div>
         ) : filteredItems.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
@@ -242,10 +240,11 @@ export default function GalleryPage() {
                       loading="lazy"
                     />
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
 
-                    <div className="absolute top-3 inset-x-3 flex items-center justify-between">
-                      <span className="px-3 py-1 rounded-full text-[11px] font-bold text-white bg-gradient-to-r from-[#E53E24] to-[#F97316] shadow-md backdrop-blur-xs">
+                    {/* Top Tag & Like Button */}
+                    <div className="absolute top-3 inset-x-3 flex items-center justify-between z-10">
+                      <span className="px-3 py-1 rounded-full text-[11px] font-bold text-white bg-black/60 border border-white/20 backdrop-blur-md">
                         {item.rawCategory}
                       </span>
 
@@ -253,10 +252,10 @@ export default function GalleryPage() {
                         onClick={(e) => handleLike(e, itemId)}
                         className={`p-2 rounded-full backdrop-blur-md transition-all duration-200 flex items-center gap-1.5 shadow-md ${
                           isLiked
-                            ? 'bg-red-500 text-white scale-110'
+                            ? 'bg-red-500 text-white scale-105'
                             : 'bg-black/40 text-white/90 hover:bg-black/60 hover:text-red-400'
                         }`}
-                        title="Like photo"
+                        title="Appreciate photo"
                       >
                         <Heart
                           className={`w-3.5 h-3.5 transition-colors ${
@@ -267,15 +266,17 @@ export default function GalleryPage() {
                       </button>
                     </div>
 
+                    {/* Hover Inspect Pill */}
                     <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                      <div className="px-4 py-2 rounded-full bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md text-xs font-bold text-[#111827] dark:text-white shadow-xl flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                      <div className="px-4 py-2 rounded-full bg-white/95 dark:bg-[#111827]/95 backdrop-blur-md text-xs font-bold text-[#111827] dark:text-white shadow-xl flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform">
                         <Maximize2 className="w-3.5 h-3.5 text-[#E53E24]" />
-                        <span>View Fullscreen</span>
+                        <span>View Photo</span>
                       </div>
                     </div>
 
+                    {/* Bottom Metadata inside Image */}
                     <div className="absolute bottom-3 inset-x-3 space-y-1 text-white">
-                      <h3 className="font-extrabold text-base leading-snug drop-shadow-sm group-hover:text-[#F97316] transition-colors">
+                      <h3 className="font-extrabold text-base leading-snug drop-shadow-sm group-hover:text-[#F97316] transition-colors line-clamp-1">
                         {item.title}
                       </h3>
 
@@ -293,7 +294,7 @@ export default function GalleryPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 space-y-3 bg-white dark:bg-[#111827]">
+                  <div className="p-4 space-y-2.5 bg-white dark:bg-[#111827]">
                     <p className="text-xs text-[#4B5563] dark:text-gray-400 line-clamp-2 leading-relaxed">
                       {item.caption}
                     </p>
@@ -303,7 +304,7 @@ export default function GalleryPage() {
                         {item.photographer}
                       </span>
                       <span className="text-[#E53E24] font-semibold group-hover:underline">
-                        Inspect &rarr;
+                        Details &rarr;
                       </span>
                     </div>
                   </div>
@@ -314,9 +315,9 @@ export default function GalleryPage() {
         ) : (
           <div className="py-16 text-center bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 space-y-3">
             <FolderOpen className="w-10 h-10 text-gray-400 mx-auto" />
-            <h3 className="text-base font-bold text-[#111827] dark:text-white">No live events found</h3>
+            <h3 className="text-base font-bold text-[#111827] dark:text-white">No photographs in this section</h3>
             <p className="text-xs text-[#4B5563] dark:text-gray-400">
-              Create events in the Admin Panel to populate this live gallery.
+              Media uploads for this category will appear here once published.
             </p>
           </div>
         )}
@@ -327,15 +328,15 @@ export default function GalleryPage() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-black/92 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
           onClick={closeLightbox}
         >
           <div className="absolute top-4 inset-x-4 sm:inset-x-8 flex items-center justify-between text-white z-20 pointer-events-auto">
             <div className="flex items-center gap-3">
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-white/10 backdrop-blur-md border border-white/20">
-                Photo {lightboxIndex + 1} of {filteredItems.length}
+                {lightboxIndex + 1} / {filteredItems.length}
               </span>
-              <span className="hidden sm:inline-block text-xs font-semibold text-gray-300">
+              <span className="hidden sm:inline-block text-xs font-semibold text-gray-300 truncate max-w-md">
                 {activePhoto.title}
               </span>
             </div>
@@ -343,7 +344,7 @@ export default function GalleryPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => handleLike(e, activePhoto._id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
                   userLiked[activePhoto._id]
                     ? 'bg-red-500 text-white'
                     : 'bg-white/10 hover:bg-white/20 text-white'
@@ -354,7 +355,7 @@ export default function GalleryPage() {
                     userLiked[activePhoto._id] ? 'fill-white text-white' : ''
                   }`}
                 />
-                <span>{likes[activePhoto._id] || 0} Likes</span>
+                <span>{likes[activePhoto._id] || 0}</span>
               </button>
 
               <button
@@ -391,13 +392,13 @@ export default function GalleryPage() {
 
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-5xl w-full max-h-[88vh] flex flex-col rounded-3xl overflow-hidden bg-[#111827] border border-gray-800 shadow-2xl z-10"
+            className="relative max-w-5xl w-full max-h-[90vh] flex flex-col rounded-3xl overflow-hidden bg-[#111827] border border-gray-800 shadow-2xl z-10"
           >
-            <div className="relative flex-1 bg-black/60 flex items-center justify-center max-h-[64vh] overflow-hidden">
+            <div className="relative flex-1 bg-black/80 flex items-center justify-center max-h-[66vh] overflow-hidden p-2">
               <img
                 src={activePhoto.image}
                 alt={activePhoto.title}
-                className="max-h-[64vh] w-auto max-w-full object-contain select-none"
+                className="max-h-[64vh] w-auto max-w-full object-contain select-none rounded-xl"
               />
             </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -16,6 +16,9 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  ArrowRight,
+  ShieldAlert,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { parseGvpceRoll } from '../utils/parseRollNumber';
@@ -28,6 +31,20 @@ import {
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // STRICT ACCESS CHECK: Only super admins can access or see admin console shortcuts
+  const isSuperAdmin = user?.role === 'admin';
+
+  // Role display badge
+  const roleDisplay = 
+    user?.role === 'admin' 
+      ? 'Administrator' 
+      : user?.role === 'board' 
+      ? 'Board Member' 
+      : user?.role === 'volunteer' 
+      ? 'Event Volunteer' 
+      : 'GVPCE Student';
 
   // Parse roll info dynamically from user data
   const rollSource =
@@ -41,8 +58,10 @@ export default function Dashboard() {
   const studentEmail = user?.email || `${studentRoll}@gvpce.ac.in`;
   const studentName = user?.name || 'OpenForge Member';
 
-  // Navigation Tabs: 'passes' | 'explore'
-  const [activeTab, setActiveTab] = useState('passes');
+  const queryParams = new URLSearchParams(location.search);
+  const initialTab = location.state?.tab || queryParams.get('tab') || 'passes';
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [successToast, setSuccessToast] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -55,7 +74,12 @@ export default function Dashboard() {
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [registeringId, setRegisteringId] = useState(null);
 
-  // Fetch student's registered tickets from backend
+  useEffect(() => {
+    if (location.state?.tab) {
+      setActiveTab(location.state.tab);
+    }
+  }, [location.state]);
+
   const fetchTickets = useCallback(async () => {
     try {
       setLoadingTickets(true);
@@ -68,7 +92,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Fetch open campus events from backend
   const fetchAllEvents = useCallback(async () => {
     try {
       setLoadingEvents(true);
@@ -98,12 +121,11 @@ export default function Dashboard() {
     try {
       setRegisteringId(event._id);
       setErrorMessage('');
-      const res = await registerForEvent(event._id);
+      await registerForEvent(event._id);
 
       setSuccessToast(`🎉 Successfully registered for "${event.title}"! Entry pass issued.`);
       setTimeout(() => setSuccessToast(''), 4500);
 
-      // Refresh tickets and available events
       await fetchTickets();
       await fetchAllEvents();
       setActiveTab('passes');
@@ -116,7 +138,6 @@ export default function Dashboard() {
     }
   };
 
-  // Select the latest registered pass for the featured QR banner
   const featuredPass = registeredTickets.length > 0 ? registeredTickets[0] : null;
 
   return (
@@ -132,7 +153,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => setErrorMessage('')}
-              className="text-red-500 hover:text-red-800 text-xs font-bold"
+              className="text-red-500 hover:text-red-800 text-xs font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -148,7 +169,7 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => setSuccessToast('')}
-              className="text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white text-xs font-bold"
+              className="text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white text-xs font-bold cursor-pointer"
             >
               ✕
             </button>
@@ -158,13 +179,14 @@ export default function Dashboard() {
         {/* 1. HEADER / PROFILE BANNER */}
         <div className="bg-white dark:bg-[#111827] rounded-3xl p-6 sm:p-8 border border-soft-peach dark:border-gray-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Verified GVPCE Student
+                Verified Student
               </span>
-              <span className="text-xs font-bold text-[#E53E24] uppercase tracking-wider">
-                Student Portal
+
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-[#E53E24]/10 text-[#E53E24] border border-[#E53E24]/20 uppercase tracking-wider">
+                {roleDisplay}
               </span>
             </div>
 
@@ -197,11 +219,30 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Quick Actions / Logout */}
-          <div className="flex items-center gap-3 self-start lg:self-center">
+          {/* Quick Actions */}
+          <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
+            {/* ONLY visible to Super Admins */}
+            {isSuperAdmin && (
+              <Link
+                to="/admin"
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                <span>Super Admin Console</span>
+              </Link>
+            )}
+
+            <Link
+              to="/events"
+              className="px-4 py-2 text-xs font-bold text-[#111827] dark:text-white bg-[#FFF7ED] dark:bg-gray-800 hover:bg-soft-peach rounded-xl border border-soft-peach dark:border-gray-700 transition-all flex items-center gap-1.5"
+            >
+              <Compass className="w-3.5 h-3.5 text-[#F97316]" />
+              <span>Full Event Directory</span>
+            </Link>
+
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-xs font-semibold text-[#E53E24] hover:text-white border border-[#E53E24] hover:bg-[#E53E24] dark:hover:bg-[#E53E24] rounded-xl transition-all flex items-center gap-1.5 shadow-2xs"
+              className="px-4 py-2 text-xs font-semibold text-[#E53E24] hover:text-white border border-[#E53E24] hover:bg-[#E53E24] rounded-xl transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Log out</span>
@@ -272,40 +313,50 @@ export default function Dashboard() {
         ) : null}
 
         {/* 3. TABS NAVIGATION */}
-        <div className="border-b border-soft-peach dark:border-gray-800 flex items-center gap-8">
-          <button
-            onClick={() => setActiveTab('passes')}
-            className={`relative pb-3 text-sm font-bold transition-colors ${
-              activeTab === 'passes'
-                ? 'text-[#E53E24]'
-                : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
-            }`}
-          >
-            <span>My Passes / Registered Events</span>
-            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24]">
-              {registeredTickets.length}
-            </span>
-            {activeTab === 'passes' && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full" />
-            )}
-          </button>
+        <div className="border-b border-soft-peach dark:border-gray-800 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <button
+              onClick={() => setActiveTab('passes')}
+              className={`relative pb-3 text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === 'passes'
+                  ? 'text-[#E53E24]'
+                  : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
+              }`}
+            >
+              <span>My Passes / Registered Events</span>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24]">
+                {registeredTickets.length}
+              </span>
+              {activeTab === 'passes' && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full" />
+              )}
+            </button>
 
-          <button
-            onClick={() => setActiveTab('explore')}
-            className={`relative pb-3 text-sm font-bold transition-colors ${
-              activeTab === 'explore'
-                ? 'text-[#E53E24]'
-                : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
-            }`}
+            <button
+              onClick={() => setActiveTab('explore')}
+              className={`relative pb-3 text-sm font-bold transition-colors cursor-pointer ${
+                activeTab === 'explore'
+                  ? 'text-[#E53E24]'
+                  : 'text-[#4B5563] dark:text-gray-400 hover:text-[#111827] dark:hover:text-white'
+              }`}
+            >
+              <span>Explore Open Events</span>
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/50 text-[#F97316]">
+                {openEvents.length} Live
+              </span>
+              {activeTab === 'explore' && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full" />
+              )}
+            </button>
+          </div>
+
+          <Link
+            to="/events"
+            className="hidden sm:flex items-center gap-1 text-xs font-bold text-[#E53E24] hover:underline pb-3"
           >
-            <span>Explore Open Events</span>
-            <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-orange-50 dark:bg-orange-950/50 text-[#F97316]">
-              {openEvents.length} Live
-            </span>
-            {activeTab === 'explore' && (
-              <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#E53E24] rounded-full" />
-            )}
-          </button>
+            <span>Browse Full Catalog</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* 4. MY PASSES / REGISTERED EVENTS TAB CONTENT */}
@@ -351,7 +402,7 @@ export default function Dashboard() {
 
                         <div className="space-y-1.5 text-xs text-[#4B5563] dark:text-gray-400 pt-1">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-[#E53E24] shrink-0" />
+                            <Calendar className="w-3.5 h-3.5 text-[#E53E24] shrink-0" />
                             <span>
                               {ev.eventDate
                                 ? new Date(ev.eventDate).toLocaleDateString('en-IN', {
@@ -364,7 +415,7 @@ export default function Dashboard() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-[#F97316] shrink-0" />
+                            <Clock className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
                             <span>
                               {ev.eventDate
                                 ? new Date(ev.eventDate).toLocaleTimeString('en-IN', {
@@ -375,7 +426,7 @@ export default function Dashboard() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-[#F97316] shrink-0" />
+                            <MapPin className="w-3.5 h-3.5 text-[#F97316] shrink-0" />
                             <span>{ev.venue || 'GVPCE Campus'}</span>
                           </div>
                         </div>
@@ -411,7 +462,7 @@ export default function Dashboard() {
                 </div>
                 <button
                   onClick={() => setActiveTab('explore')}
-                  className="px-5 py-2.5 rounded-xl bg-[#E53E24] hover:bg-[#CB321A] text-white text-xs font-semibold shadow-xs transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-[#E53E24] hover:bg-[#CB321A] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
                   Browse Upcoming Events
                 </button>
@@ -522,7 +573,7 @@ export default function Dashboard() {
                           <button
                             disabled={registeringId === evt._id}
                             onClick={() => handleRegisterEvent(evt)}
-                            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-[#E53E24] hover:bg-[#CB321A] shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold text-white bg-[#E53E24] hover:bg-[#CB321A] shadow-xs hover:shadow transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                           >
                             {registeringId === evt._id ? (
                               <>

@@ -4,7 +4,6 @@ import {
   Shield,
   HeartHandshake,
   Sparkles,
-  Quote,
   Loader2,
   Users2,
   Building2,
@@ -95,7 +94,7 @@ export default function TeamPage() {
       </section>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 space-y-16">
         {loading ? (
           <div className="py-24 flex flex-col items-center justify-center text-[#4B5563] space-y-3">
             <Loader2 className="w-8 h-8 animate-spin text-[#E53E24]" />
@@ -108,29 +107,35 @@ export default function TeamPage() {
               No Team Members Registered Yet
             </h3>
             <p className="text-xs text-[#4B5563] dark:text-gray-400 max-w-sm mx-auto">
-              The Admin can now add faculty mentors, core board members, and student coordinators directly through the Admin Console.
+              Faculty mentors, core board members, and student coordinators will appear here once added to the directory.
             </p>
           </div>
         ) : (
           <>
             {/* TIER 1: FACULTY COORDINATORS */}
             {(activeFilter === 'all' || activeFilter === 'faculty') && facultyList.length > 0 && (
-              <section className="space-y-8">
-                <div className="flex items-center gap-3 border-b border-soft-peach dark:border-gray-800 pb-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] flex items-center justify-center shadow-xs">
-                    <GraduationCap className="w-6 h-6" />
+              <section className="space-y-6">
+                <div className="flex items-center justify-between border-b border-soft-peach dark:border-gray-800 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] flex items-center justify-center shadow-xs">
+                      <GraduationCap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#E53E24]">
+                        Academic Guidance
+                      </span>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white">
+                        Faculty Mentors
+                      </h2>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#E53E24]">
-                      Academic Guidance
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
-                      Faculty Coordinators & Mentors
-                    </h2>
-                  </div>
+
+                  <span className="text-xs font-bold text-[#E53E24] bg-[#FFF7ED] dark:bg-[#E53E24]/20 border border-[#E53E24]/20 px-3 py-1 rounded-full">
+                    {facultyList.length} Mentors
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {facultyList.map((fac, idx) => {
                     const id = fac._id || fac.id || `fac-${idx}`;
                     const photo = fac.avatar || fac.photoUrl;
@@ -138,9 +143,9 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -149,48 +154,36 @@ export default function TeamPage() {
                               className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="w-24 h-24 rounded-full bg-[#E53E24]/10 text-[#E53E24] flex items-center justify-center font-black text-4xl">
+                            <div className="w-16 h-16 rounded-full bg-[#E53E24]/10 text-[#E53E24] flex items-center justify-center font-black text-2xl">
                               {fac.name?.charAt(0) || 'F'}
                             </div>
                           )}
 
-                          {/* Hover Gradient Shade */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                          <div className="absolute top-4 left-4 z-10">
-                            <span className="px-3.5 py-1 rounded-full text-xs font-bold shadow-md uppercase tracking-wider bg-stone-900 text-white">
-                              Faculty Mentor
+                          <div className="absolute top-3 left-3 z-10">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-stone-900 text-white">
+                              Mentor
                             </span>
                           </div>
                         </div>
 
-                        <div className="p-6 sm:p-7 flex-1 flex flex-col justify-between space-y-5">
-                          <div className="space-y-3">
-                            <div>
-                              <h3 className="text-xl font-extrabold text-[#111827] dark:text-white">
-                                {fac.name}
-                              </h3>
-                              <p className="text-xs font-bold text-[#E53E24] mt-0.5">
-                                {fac.designation || 'Assistant Professor, Dept of IT'}
-                              </p>
-                              <p className="text-xs text-[#4B5563] dark:text-gray-400 mt-1">
-                                {fac.department || 'Department of Information Technology'}
-                              </p>
-                            </div>
-
-                            {fac.message && (
-                              <div className="p-4 rounded-2xl bg-[#FFF7ED]/50 dark:bg-gray-800/50 border border-soft-peach dark:border-gray-700/80">
-                                <Quote className="w-4 h-4 text-[#F97316] mb-1 opacity-70" />
-                                <p className="text-xs text-[#4B5563] dark:text-gray-300 leading-relaxed italic">
-                                  "{fac.message}"
-                                </p>
-                              </div>
-                            )}
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1">
+                            <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
+                              {fac.name}
+                            </h4>
+                            <p className="text-xs font-semibold text-[#E53E24] truncate">
+                              {fac.designation || 'Assistant Professor, Dept of IT'}
+                            </p>
+                            <p className="text-[11px] text-[#4B5563] dark:text-gray-400 truncate">
+                              {fac.department || 'Information Technology'}
+                            </p>
                           </div>
 
-                          <div className="pt-4 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
-                            <span className="text-xs text-gray-400 font-semibold flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5" /> GVPCE Autonomous
+                          <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
+                            <span className="text-[11px] text-gray-400 font-semibold flex items-center gap-1">
+                              <Building2 className="w-3 h-3" /> GVPCE
                             </span>
 
                             {fac.linkedin && (
@@ -198,10 +191,10 @@ export default function TeamPage() {
                                 href={fac.linkedin}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="p-2 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
+                                className="p-1.5 rounded-lg bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
                                 title="LinkedIn Profile"
                               >
-                                <LinkedinIcon className="w-4 h-4" />
+                                <LinkedinIcon className="w-3.5 h-3.5" />
                               </a>
                             )}
                           </div>
@@ -215,22 +208,28 @@ export default function TeamPage() {
 
             {/* TIER 2: BOARD MEMBERS */}
             {(activeFilter === 'all' || activeFilter === 'board') && boardList.length > 0 && (
-              <section className="space-y-8">
-                <div className="flex items-center gap-3 border-b border-soft-peach dark:border-gray-800 pb-4">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-gray-800 text-[#F97316] flex items-center justify-center shadow-xs">
-                    <Shield className="w-6 h-6" />
+              <section className="space-y-6">
+                <div className="flex items-center justify-between border-b border-soft-peach dark:border-gray-800 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-gray-800 text-[#F97316] flex items-center justify-center shadow-xs">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#F97316]">
+                        Student Leadership
+                      </span>
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white">
+                        Core Board Members
+                      </h2>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#F97316]">
-                      Student Leadership & Governance
-                    </span>
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
-                      Core Board Members
-                    </h2>
-                  </div>
+
+                  <span className="text-xs font-bold text-[#F97316] bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-900/60 px-3 py-1 rounded-full">
+                    {boardList.length} Leaders
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                   {boardList.map((member, idx) => {
                     const id = member._id || member.rollNumber || `board-${idx}`;
                     const photo = member.avatar || member.photoUrl;
@@ -238,9 +237,9 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-stone-100 to-amber-50 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -249,56 +248,55 @@ export default function TeamPage() {
                               className="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                             />
                           ) : (
-                            <div className="w-20 h-20 rounded-full bg-orange-500/10 text-[#F97316] flex items-center justify-center font-black text-3xl">
+                            <div className="w-16 h-16 rounded-full bg-orange-500/10 text-[#F97316] flex items-center justify-center font-black text-2xl">
                               {member.name?.charAt(0) || 'B'}
                             </div>
                           )}
 
-                          {/* Hover Gradient Shade */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                          <div className="absolute top-4 left-4 z-10">
-                            <span className="px-3 py-1 rounded-full text-xs font-bold shadow-md uppercase tracking-wider bg-orange-600 text-white">
-                              {member.role === 'admin' ? 'Super Admin' : 'Executive Board'}
+                          <div className="absolute top-3 left-3 z-10">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs uppercase tracking-wider bg-orange-600 text-white">
+                              {member.role === 'admin' ? 'Super Admin' : 'Board'}
                             </span>
                           </div>
                         </div>
 
-                        <div className="p-6 flex-1 flex flex-col justify-between space-y-4">
-                          <div className="space-y-1.5">
-                            <h3 className="text-lg font-extrabold text-[#111827] dark:text-white">
+                        <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1">
+                            <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
                               {member.name}
-                            </h3>
-                            <p className="text-xs font-bold text-[#F97316] uppercase tracking-wider">
-                              {member.designation || (member.role === 'admin' ? 'Lead Administrator' : 'Core Committee')}
+                            </h4>
+                            <p className="text-xs font-semibold text-[#F97316] truncate">
+                              {member.designation || (member.role === 'admin' ? 'Lead Administrator' : 'Executive')}
                             </p>
-                            <p className="text-xs text-[#4B5563] dark:text-gray-400">
+                            <p className="text-[11px] text-[#4B5563] dark:text-gray-400 truncate">
                               {member.department || 'Information Technology'}
                             </p>
 
-                            {/* Study Year Display */}
+                            {/* Study Year Pill */}
                             {member.year && (
                               <div className="pt-1">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] border border-[#E53E24]/20">
-                                  <Calendar className="w-3 h-3" />
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] border border-[#E53E24]/20">
+                                  <Calendar className="w-2.5 h-2.5" />
                                   <span>{member.year}</span>
                                 </span>
                               </div>
                             )}
                           </div>
 
-                          <div className="pt-4 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between text-xs">
-                            <span className="font-mono text-xs font-bold text-[#E53E24]">
-                              {member.rollNumber || 'GVPCE Core'}
+                          <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold text-[#E53E24] truncate max-w-[120px]">
+                              {member.rollNumber || 'Core'}
                             </span>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               {member.linkedin && (
                                 <a
                                   href={member.linkedin}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="p-2 rounded-xl bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
+                                  className="p-1.5 rounded-lg bg-[#FFF7ED] dark:bg-gray-800 text-[#E53E24] hover:bg-[#E53E24] hover:text-white transition-all shadow-2xs"
                                   title="LinkedIn"
                                 >
                                   <LinkedinIcon className="w-3.5 h-3.5" />
@@ -309,7 +307,7 @@ export default function TeamPage() {
                                   href={member.github}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="p-2 rounded-xl bg-gray-100 dark:bg-gray-800 text-[#111827] dark:text-gray-200 hover:bg-black hover:text-white transition-all shadow-2xs"
+                                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-[#111827] dark:text-gray-200 hover:bg-black hover:text-white transition-all shadow-2xs"
                                   title="GitHub"
                                 >
                                   <GithubIcon className="w-3.5 h-3.5" />
@@ -327,24 +325,24 @@ export default function TeamPage() {
 
             {/* TIER 3: STUDENT VOLUNTEERS */}
             {(activeFilter === 'all' || activeFilter === 'volunteers') && volunteerList.length > 0 && (
-              <section className="space-y-8">
+              <section className="space-y-6">
                 <div className="flex items-center justify-between border-b border-soft-peach dark:border-gray-800 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-gray-800 text-purple-600 flex items-center justify-center shadow-xs">
-                      <HeartHandshake className="w-6 h-6" />
+                      <HeartHandshake className="w-5 h-5" />
                     </div>
                     <div>
                       <span className="text-[11px] font-bold uppercase tracking-wider text-purple-600">
-                        Ground Operations & Verification
+                        Ground Operations
                       </span>
-                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#111827] dark:text-white">
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-[#111827] dark:text-white">
                         Student Volunteers
                       </h2>
                     </div>
                   </div>
 
                   <span className="text-xs font-bold text-purple-700 bg-purple-50 dark:bg-purple-950/40 border border-purple-200 px-3 py-1 rounded-full">
-                    {volunteerList.length} Active Field Staff
+                    {volunteerList.length} Active Staff
                   </span>
                 </div>
 
@@ -356,9 +354,9 @@ export default function TeamPage() {
                     return (
                       <div
                         key={id}
-                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
+                        className="group bg-white dark:bg-[#111827] rounded-3xl border border-soft-peach dark:border-gray-800 shadow-xs hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col justify-between"
                       >
-                        {/* 4:5 Aspect Ratio Viewport with Hover Gradient */}
+                        {/* 4:5 Aspect Ratio Viewport */}
                         <div className="relative aspect-[4/5] w-full overflow-hidden bg-gradient-to-tr from-purple-50 to-stone-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center border-b border-soft-peach dark:border-gray-800">
                           {photo ? (
                             <img
@@ -372,7 +370,6 @@ export default function TeamPage() {
                             </div>
                           )}
 
-                          {/* Hover Gradient Shade */}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                           <div className="absolute top-3 left-3 z-10">
@@ -387,14 +384,14 @@ export default function TeamPage() {
                             <h4 className="font-extrabold text-base text-[#111827] dark:text-white truncate">
                               {vol.name}
                             </h4>
-                            <p className="text-xs font-semibold text-purple-600 dark:text-purple-400">
+                            <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 truncate">
                               {vol.designation || 'Field Coordinator'}
                             </p>
                             <p className="text-[11px] text-[#4B5563] dark:text-gray-400 truncate">
                               {vol.department || 'Information Technology'}
                             </p>
 
-                            {/* Study Year Display */}
+                            {/* Study Year Pill */}
                             {vol.year && (
                               <div className="pt-1">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
@@ -406,7 +403,7 @@ export default function TeamPage() {
                           </div>
 
                           <div className="pt-3 border-t border-soft-peach dark:border-gray-800 flex items-center justify-between">
-                            <span className="font-mono text-xs font-bold text-[#E53E24]">
+                            <span className="font-mono text-xs font-bold text-[#E53E24] truncate max-w-[120px]">
                               {vol.rollNumber || 'Volunteer'}
                             </span>
 
